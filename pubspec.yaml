@@ -1,0 +1,27 @@
+name: "GolfBets"
+description: "A golf scoring and betting app."
+publish_to: 'none'
+
+version: 2.0.0
+
+environment:
+  sdk: ">=3.7.2 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  collection: ^1.18.0
+  path_provider: ^2.1.4
+  permission_handler: ^12.0.0+1
+  
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  hive_generator: ^2.0.1 # Downgraded to stable version
+  build_runner: ^2.4.13
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
