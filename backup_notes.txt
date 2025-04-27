@@ -1,0 +1,24 @@
+GolfBets Backup Notes (2025-04-27)
+PS C:\Users\kosta\GolfBets> flutter --version
+Flutter 3.29.3 • channel stable • https://github.com/flutter/flutter.git
+Framework • revision ea121f8859 (2 weeks ago) • 2025-04-11 19:10:07 +0000
+Engine • revision cf56914b32
+Tools • Dart 3.7.2 • DevTools 2.42.3
+PS C:\Users\kosta\GolfBets> java --version
+openjdk 17.0.15 2025-04-15
+OpenJDK Runtime Environment Temurin-17.0.15+6 (build 17.0.15+6)
+OpenJDK 64-Bit Server VM Temurin-17.0.15+6 (build 17.0.15+6, mixed mode, sharing)
+Install Flutter: https://flutter.dev/docs/get-started/install
+Install Android SDK: Via Android Studio
+Run flutter pub get for dependencies
+PS C:\Users\kosta\GolfBets> flutter doctor
+Doctor summary (to see all details, run flutter doctor -v):
+[√] Flutter (Channel stable, 3.29.3, on Microsoft Windows [Version 10.0.26100.3915], locale en-US)
+[√] Windows Version (11 Pro 64-bit, 24H2, 2009)
+[√] Android toolchain - develop for Android devices (Android SDK version 35.0.1)
+[√] Chrome - develop for the web
+[√] Visual Studio - develop Windows apps (Visual Studio Build Tools 2022 17.13.5)
+[√] Android Studio (version 2024.3)
+[√] VS Code (version 1.99.3)
+[√] Connected device (4 available)
+[√] Network resources
