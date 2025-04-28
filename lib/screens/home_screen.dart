@@ -5,7 +5,6 @@ import '../models/player.dart';
 import '../models/hole.dart';
 import '../models/score_entry.dart';
 import 'score_entry_screen.dart';
-import 'player_management_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,78 +26,97 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _loadData() async {
+    print('HomeScreen: Loading data');
     setState(() => isLoading = true);
     try {
       if (Hive.isBoxOpen('playerBox')) {
         players = playerBox.values.toList();
       }
       if (Hive.isBoxOpen('holeBox')) {
-        holes = holeBox.values.toList();
+        holes = Hive.box<Hole>('holeBox').values.toList();
       }
       if (Hive.isBoxOpen('scoreBox')) {
         scores = scoreBox.values.toList();
       }
+      print('HomeScreen: Data loaded successfully');
     } catch (e) {
+      print('HomeScreen: Error loading data: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error loading data')),
       );
     }
     setState(() => isLoading = false);
+    print('HomeScreen: isLoading set to false');
   }
 
-  void _managePlayers() {
-    if (Hive.isBoxOpen('playerBox')) {
+  void _startNewGame() {
+    print('HomeScreen: Start New Game button pressed');
+    try {
+      setState(() {
+        players.clear();
+        holes.clear();
+        scores.clear();
+        if (Hive.isBoxOpen('playerBox')) {
+          playerBox.clear();
+          print('HomeScreen: Cleared playerBox');
+        } else {
+          print('HomeScreen: playerBox not open');
+        }
+        if (Hive.isBoxOpen('holeBox')) {
+          Hive.box<Hole>('holeBox').clear();
+          print('HomeScreen: Cleared holeBox');
+        } else {
+          print('HomeScreen: holeBox not open');
+        }
+        if (Hive.isBoxOpen('scoreBox')) {
+          scoreBox.clear();
+          print('HomeScreen: Cleared scoreBox');
+        } else {
+          print('HomeScreen: scoreBox not open');
+        }
+        if (Hive.isBoxOpen('nassausettingbox')) {
+          Hive.box('nassausettingbox').clear();
+          print('HomeScreen: Cleared nassausettingbox');
+        } else {
+          print('HomeScreen: nassausettingbox not open');
+        }
+        if (Hive.isBoxOpen('skinssettingbox')) {
+          Hive.box('skinssettingbox').clear();
+          print('HomeScreen: Cleared skinssettingbox');
+        } else {
+          print('HomeScreen: skinssettingbox not open');
+        }
+      });
+      print('HomeScreen: Showing SnackBar');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('New game started! All games disabled. Please add players.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      print('HomeScreen: Navigating to ScoreEntryScreen');
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const PlayerManagementScreen()),
+        MaterialPageRoute(builder: (context) => const ScoreEntryScreen(resetGames: true)),
       );
-    } else {
+    } catch (e) {
+      print('HomeScreen: Error in _startNewGame: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: Player data not available')),
+        SnackBar(content: Text('Error starting new game: $e')),
       );
     }
-  }
-
-  void _enterScores() {
-    if (Hive.isBoxOpen('scoreBox')) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ScoreEntryScreen()),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: Score data not available')),
-      );
-    }
-  }
-
-  void _newGame() {
-    setState(() {
-      players.clear();
-      holes.clear();
-      scores.clear();
-      if (Hive.isBoxOpen('playerBox')) playerBox.clear();
-      if (Hive.isBoxOpen('holeBox')) holeBox.clear();
-      if (Hive.isBoxOpen('scoreBox')) scoreBox.clear();
-      if (Hive.isBoxOpen('nassauSettingsBox')) nassauSettingsBox.clear();
-      if (Hive.isBoxOpen('skinsSettingsBox')) skinsSettingsBox.clear();
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('New game started!'),
-        backgroundColor: Colors.green,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
+      print('HomeScreen: Showing loading indicator');
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
+    print('HomeScreen: Building UI');
     return Scaffold(
       appBar: AppBar(
         title: const Text('GolfBets'),
@@ -133,47 +151,17 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 32),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _managePlayers,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[600],
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text('Manage Players', style: TextStyle(fontSize: 16)),
-                      ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _startNewGame,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _enterScores,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[600],
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text('Enter Scores', style: TextStyle(fontSize: 16)),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _newGame,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[600],
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text('New Game', style: TextStyle(fontSize: 16)),
-                      ),
-                    ),
-                  ],
+                    child: const Text('Start New Game', style: TextStyle(fontSize: 16)),
+                  ),
                 ),
               ),
             ],
@@ -183,7 +171,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
 
 
 

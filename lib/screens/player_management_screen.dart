@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
-import '../main.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/player.dart';
 
 class PlayerManagementScreen extends StatefulWidget {
-  const PlayerManagementScreen({super.key});
+  final VoidCallback? onPlayersChanged; // Callback to notify ScoreEntryScreen
+
+  const PlayerManagementScreen({super.key, this.onPlayersChanged});
 
   @override
   State<PlayerManagementScreen> createState() => _PlayerManagementScreenState();
@@ -24,30 +25,34 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
   }
 
   void _loadPlayers() async {
+    print('PlayerManagementScreen: Loading players');
     setState(() => isLoading = true);
     try {
-      if (Hive.isBoxOpen('playerBox')) {
-        players = playerBox.values.toList();
-      }
+      final box = await Hive.openBox<Player>('playerBox');
+      players = box.values.toList();
+      print('PlayerManagementScreen: Players loaded, count: ${players.length}');
     } catch (e) {
+      print('PlayerManagementScreen: Error loading players: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error loading players')),
       );
     }
     setState(() => isLoading = false);
+    print('PlayerManagementScreen: isLoading set to false');
   }
 
-  void _addPlayer() {
-    if (Hive.isBoxOpen('playerBox')) {
+  void _addPlayer() async {
+    try {
+      final box = await Hive.openBox<Player>('playerBox');
       final name = _nameController.text.trim();
-      final handicap = int.tryParse(_handicapController.text) ?? 0;
+      final handicap = int.tryParse(_handicapController.text.trim()) ?? 0;
       if (name.isNotEmpty) {
         final player = Player(name: name, handicap: handicap);
-        playerBox.add(player);
+        await box.add(player);
         _nameController.clear();
         _handicapController.clear();
         setState(() {
-          players = playerBox.values.toList();
+          players = box.values.toList();
         });
         FocusScope.of(context).requestFocus(_nameFocusNode);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -56,30 +61,42 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
             backgroundColor: Colors.green[600],
           ),
         );
-        // Clear game settings to disable Nassau and Skins games
-        if (Hive.isBoxOpen('nassauSettingsBox') && Hive.isBoxOpen('skinsSettingsBox')) {
-          nassauSettingsBox.clear();
-          skinsSettingsBox.clear();
+        print('PlayerManagementScreen: Added player $name with handicap $handicap');
+        // Reset Nassau and Skins games due to player addition
+        try {
+          final nassauBox = await Hive.openBox('nassausettingbox');
+          final skinsBox = await Hive.openBox('skinssettingbox');
+          await nassauBox.clear();
+          await skinsBox.clear();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Nassau and Skins games disabled due to player changes'),
               backgroundColor: Colors.redAccent,
             ),
           );
+          widget.onPlayersChanged?.call(); // Notify ScoreEntryScreen
+          print('PlayerManagementScreen: Cleared game settings and notified ScoreEntryScreen');
+        } catch (e) {
+          print('PlayerManagementScreen: Error clearing game settings: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error disabling games: $e')),
+          );
         }
       }
-    } else {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error: Player data not available')),
       );
+      print('PlayerManagementScreen: Error adding player: $e');
     }
   }
 
-  void _editPlayer(int index) {
+  void _editPlayer(int index) async {
     final player = players[index];
     final editNameController = TextEditingController(text: player.name);
     final editHandicapController = TextEditingController(text: player.handicap.toString());
 
+    print('PlayerManagementScreen: Opening edit dialog for player ${player.name}');
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -112,30 +129,48 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
             child: const Text('Cancel', style: TextStyle(color: Colors.redAccent)),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               final newName = editNameController.text.trim();
-              final newHandicap = int.tryParse(editHandicapController.text) ?? 0;
+              final newHandicap = int.tryParse(editHandicapController.text.trim()) ?? 0;
               if (newName.isNotEmpty) {
-                playerBox.putAt(index, Player(name: newName, handicap: newHandicap));
-                setState(() {
-                  players = playerBox.values.toList();
-                });
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Player $newName updated!'),
-                    backgroundColor: Colors.green[600],
-                  ),
-                );
-                // Clear game settings to disable Nassau and Skins games
-                if (Hive.isBoxOpen('nassauSettingsBox') && Hive.isBoxOpen('skinsSettingsBox')) {
-                  nassauSettingsBox.clear();
-                  skinsSettingsBox.clear();
+                try {
+                  final box = await Hive.openBox<Player>('playerBox');
+                  await box.putAt(index, Player(name: newName, handicap: newHandicap));
+                  setState(() {
+                    players = box.values.toList();
+                  });
+                  Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Nassau and Skins games disabled due to player changes'),
-                      backgroundColor: Colors.redAccent,
+                    SnackBar(
+                      content: Text('Player $newName updated!'),
+                      backgroundColor: Colors.green[600],
                     ),
+                  );
+                  print('PlayerManagementScreen: Updated player to $newName with handicap $newHandicap');
+                  // Reset Nassau and Skins games due to player edit
+                  try {
+                    final nassauBox = await Hive.openBox('nassausettingbox');
+                    final skinsBox = await Hive.openBox('skinssettingbox');
+                    await nassauBox.clear();
+                    await skinsBox.clear();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Nassau and Skins games disabled due to player changes'),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                    widget.onPlayersChanged?.call(); // Notify ScoreEntryScreen
+                    print('PlayerManagementScreen: Cleared game settings and notified ScoreEntryScreen');
+                  } catch (e) {
+                    print('PlayerManagementScreen: Error clearing game settings: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error disabling games: $e')),
+                    );
+                  }
+                } catch (e) {
+                  print('PlayerManagementScreen: Error updating player: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error updating player: $e')),
                   );
                 }
               }
@@ -147,12 +182,13 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
     );
   }
 
-  void _deletePlayer(int index) {
-    if (Hive.isBoxOpen('playerBox')) {
-      final player = playerBox.getAt(index);
-      playerBox.deleteAt(index);
+  void _deletePlayer(int index) async {
+    try {
+      final box = await Hive.openBox<Player>('playerBox');
+      final player = box.getAt(index);
+      await box.deleteAt(index);
       setState(() {
-        players = playerBox.values.toList();
+        players = box.values.toList();
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -160,34 +196,53 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
           backgroundColor: Colors.redAccent,
         ),
       );
-      // Clear game settings to disable Nassau and Skins games
-      if (Hive.isBoxOpen('nassauSettingsBox') && Hive.isBoxOpen('skinsSettingsBox')) {
-        nassauSettingsBox.clear();
-        skinsSettingsBox.clear();
+      print('PlayerManagementScreen: Deleted player ${player?.name}');
+      // Reset Nassau and Skins games due to player deletion
+      try {
+        final nassauBox = await Hive.openBox('nassausettingbox');
+        final skinsBox = await Hive.openBox('skinssettingbox');
+        await nassauBox.clear();
+        await skinsBox.clear();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Nassau and Skins games disabled due to player changes'),
             backgroundColor: Colors.redAccent,
           ),
         );
+        widget.onPlayersChanged?.call(); // Notify ScoreEntryScreen
+        print('PlayerManagementScreen: Cleared game settings and notified ScoreEntryScreen');
+      } catch (e) {
+        print('PlayerManagementScreen: Error clearing game settings: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error disabling games: $e')),
+        );
       }
-    } else {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error: Player data not available')),
       );
+      print('PlayerManagementScreen: Error deleting player: $e');
     }
+  }
+
+  void _done() {
+    print('PlayerManagementScreen: Navigating back to ScoreEntryScreen');
+    Navigator.pop(context); // Return to existing ScoreEntryScreen instance
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
+      print('PlayerManagementScreen: Showing loading indicator');
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
+    print('PlayerManagementScreen: Building UI with ${players.length} players');
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Manage Players'),
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -248,6 +303,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
             ),
             Expanded(
               child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 80), // Adjusted for FAB
                 itemCount: players.length,
                 itemBuilder: (context, index) {
                   final player = players[index];
@@ -292,11 +348,18 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _done,
+        backgroundColor: Colors.green[600],
+        elevation: 6.0,
+        label: const Text('Done', style: TextStyle(fontSize: 16)),
+      ),
     );
   }
 
   @override
   void dispose() {
+    print('PlayerManagementScreen: Disposing controllers and focus node');
     _nameController.dispose();
     _handicapController.dispose();
     _nameFocusNode.dispose();

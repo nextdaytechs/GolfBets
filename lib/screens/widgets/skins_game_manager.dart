@@ -29,22 +29,38 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
   }
 
   void _loadSavedSettings() {
+    print('SkinsGameManager: Loading saved settings');
     if (skinsSettingsBox.containsKey('skinsSettings')) {
       final savedSettings = skinsSettingsBox.get('skinsSettings');
       if (savedSettings != null) {
         setState(() {
           settings = savedSettings;
           isEnabled = true;
+          print('SkinsGameManager: Settings loaded, isEnabled = true');
+        });
+      } else {
+        setState(() {
+          isEnabled = false;
+          settings = null;
+          print('SkinsGameManager: No valid settings, isEnabled = false');
         });
       }
+    } else {
+      setState(() {
+        isEnabled = false;
+        settings = null;
+        print('SkinsGameManager: No settings key, isEnabled = false');
+      });
     }
   }
 
   void _saveSettings(SkinsSettings newSettings) {
+    print('SkinsGameManager: Saving new settings');
     skinsSettingsBox.put('skinsSettings', newSettings);
     setState(() {
       settings = newSettings;
       isEnabled = true;
+      print('SkinsGameManager: Settings saved, isEnabled = true');
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -55,6 +71,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
   }
 
   void _openSetup({bool usePrevious = false}) async {
+    print('SkinsGameManager: Opening setup dialog, usePrevious = $usePrevious');
     if (usePrevious && settings != null) {
       setState(() {
         isEnabled = true;
@@ -65,6 +82,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
           backgroundColor: Colors.green[600],
         ),
       );
+      print('SkinsGameManager: Enabled with previous settings');
       return;
     }
 
@@ -206,21 +224,41 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
   }
 
   void disable() {
-    setState(() {
-      isEnabled = false;
-    });
-  }
-
-  void reset() {
+    print('SkinsGameManager: Disabling game');
+    skinsSettingsBox.delete('skinsSettings'); // Clear settings from box
     setState(() {
       isEnabled = false;
       settings = null;
+      print('SkinsGameManager: Disabled, isEnabled = false, settings = null');
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Skins Game Disabled'),
+        backgroundColor: Colors.redAccent,
+      ),
+    );
+  }
+
+  void reset() {
+    print('SkinsGameManager: Resetting game');
+    skinsSettingsBox.delete('skinsSettings'); // Clear settings from box
+    setState(() {
+      isEnabled = false;
+      settings = null;
+      print('SkinsGameManager: Reset, isEnabled = false, settings = null');
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
+    super.build(context); // Required by AutomaticKeepAliveClientMixin
+    print('SkinsGameManager: Building with ${widget.players.length} players');
+    // Clear settings if players are empty or don't match selectedPlayers
+    if (settings != null && (widget.players.isEmpty || !settings!.selectedPlayers.any((p) => widget.players.any((player) => player.name == p)))) {
+      print('SkinsGameManager: Clearing settings due to empty or mismatched players');
+      settings = null;
+      isEnabled = false;
+    }
     return ExpansionTile(
       title: const Text("Whittier Skins", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
       leading: Icon(Icons.gamepad, color: Colors.green[800]),
@@ -233,6 +271,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
             value: isEnabled,
             activeColor: Colors.green[600],
             onChanged: (val) {
+              print('SkinsGameManager: Switch toggled to $val');
               if (val) {
                 if (settings != null) {
                   showDialog(
@@ -252,6 +291,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
                                 backgroundColor: Colors.green[600],
                               ),
                             );
+                            print('SkinsGameManager: Enabled with previous settings via dialog');
                           },
                           child: const Text("Use Previous"),
                         ),
@@ -273,15 +313,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
                   _openSetup();
                 }
               } else {
-                setState(() {
-                  isEnabled = false;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Skins Game Disabled'),
-                    backgroundColor: Colors.redAccent,
-                  ),
-                );
+                disable();
               }
             },
           ),
@@ -307,6 +339,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     onPressed: () {
+                      print('SkinsGameManager: Navigating to SkinsGameScreen');
                       Navigator.push(
                         context,
                         MaterialPageRoute(
