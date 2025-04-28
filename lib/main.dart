@@ -45,7 +45,6 @@ void main() async {
       hivePath = appDocumentDir.path;
       await _writeLog("Primary storage path: $hivePath");
     } catch (e) {
-      debugPrint("Failed to get documents directory: $e");
       final tempDir = await getTemporaryDirectory();
       hivePath = tempDir.path;
       await _writeLog("Using fallback storage path: $hivePath");

@@ -31,11 +31,9 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
   @override
   void initState() {
     super.initState();
-    debugPrint("ScoreCardWidget: initState called");
     try {
       _initControllers();
-    } catch (e, stackTrace) {
-      debugPrint("ScoreCardWidget: Error in initState: $e\nStack trace: $stackTrace");
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error initializing scorecard')),
@@ -44,18 +42,15 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
   }
 
   void _initControllers() {
-    debugPrint("ScoreCardWidget: Initializing controllers for ${widget.players.length} players, ${widget.holes.length} holes");
     controllers.clear();
     try {
       for (var player in widget.players) {
         if (player.name.isEmpty) {
-          debugPrint("ScoreCardWidget: Invalid player detected");
           continue;
         }
         controllers[player.name] = {};
         for (var hole in widget.holes) {
           if (hole.number <= 0) {
-            debugPrint("ScoreCardWidget: Invalid hole detected, number: ${hole.number}");
             continue;
           }
           final entry = widget.scores.firstWhereOrNull(
@@ -66,8 +61,7 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
           );
         }
       }
-    } catch (e, stackTrace) {
-      debugPrint("ScoreCardWidget: Error in _initControllers: $e\nStack trace: $stackTrace");
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error initializing controllers')),
@@ -78,14 +72,12 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
   @override
   void didUpdateWidget(ScoreCardWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    debugPrint("ScoreCardWidget: didUpdateWidget called");
     try {
       if (!const DeepCollectionEquality().equals(oldWidget.holes, widget.holes) ||
           !const DeepCollectionEquality().equals(oldWidget.players, widget.players)) {
         _initControllers();
       }
-    } catch (e, stackTrace) {
-      debugPrint("ScoreCardWidget: Error in didUpdateWidget: $e\nStack trace: $stackTrace");
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error updating scorecard')),
@@ -94,10 +86,8 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
   }
 
   void _saveScore(String playerName, int holeNumber, String value) {
-    debugPrint("ScoreCardWidget: Saving score for $playerName on hole $holeNumber: $value");
     try {
       if (!Hive.isBoxOpen('scoreBox')) {
-        debugPrint("ScoreCardWidget: scoreBox not open, cannot save score");
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error: Score data not available')),
@@ -107,7 +97,6 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
 
       final parsed = int.tryParse(value.trim());
       if (parsed == null) {
-        debugPrint("ScoreCardWidget: Invalid score value: $value");
         return;
       }
 
@@ -126,11 +115,9 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
           relativeScore: parsed,
         ));
       }
-      debugPrint("ScoreCardWidget: Saved score $parsed for $playerName on hole $holeNumber");
       setState(() {});
       widget.onScoreChanged?.call();
-    } catch (e, stackTrace) {
-      debugPrint("ScoreCardWidget: Error saving score: $e\nStack trace: $stackTrace");
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error saving score')),
@@ -139,7 +126,6 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
   }
 
   Future<void> _showScorePicker(String playerName, int holeNumber) async {
-    debugPrint("ScoreCardWidget: Showing score picker for $playerName, hole $holeNumber");
     try {
       int? selectedScore;
       await showDialog(
@@ -182,19 +168,15 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
       if (selectedScore != null) {
         final playerControllers = controllers[playerName];
         if (playerControllers == null) {
-          debugPrint("ScoreCardWidget: No controllers found for player $playerName");
           return;
         }
         final controller = playerControllers[holeNumber];
         if (controller != null) {
           controller.text = selectedScore.toString();
           _saveScore(playerName, holeNumber, selectedScore.toString());
-        } else {
-          debugPrint("ScoreCardWidget: Controller not found for $playerName, hole $holeNumber");
         }
       }
-    } catch (e, stackTrace) {
-      debugPrint("ScoreCardWidget: Error in _showScorePicker: $e\nStack trace: $stackTrace");
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error showing score picker')),
@@ -224,19 +206,16 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
         default:
           return '';
       }
-    } catch (e, stackTrace) {
-      debugPrint("ScoreCardWidget: Error in _scoreLabel: $e\nStack trace: $stackTrace");
+    } catch (e) {
       return '';
     }
   }
 
   int _calculateTotal(String playerName) {
-    debugPrint("ScoreCardWidget: Calculating total for $playerName");
     int total = 0;
     try {
       final playerControllers = controllers[playerName];
       if (playerControllers == null) {
-        debugPrint("ScoreCardWidget: No controllers found for player $playerName in _calculateTotal");
         return total;
       }
       for (var hole in widget.holes) {
@@ -244,8 +223,8 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
         final val = int.tryParse(controller?.text.trim() ?? '');
         if (val != null) total += val;
       }
-    } catch (e, stackTrace) {
-      debugPrint("ScoreCardWidget: Error in _calculateTotal for $playerName: $e\nStack trace: $stackTrace");
+    } catch (e) {
+      return total;
     }
     return total;
   }
@@ -254,7 +233,6 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
     int total = 0;
     final playerControllers = controllers[playerName];
     if (playerControllers == null) {
-      debugPrint("ScoreCardWidget: No controllers found for player $playerName in _calculateTotalScoreForRange");
       return total;
     }
     for (var hole in widget.holes) {
@@ -275,30 +253,21 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("ScoreCardWidget: Building with ${widget.holes.length} holes, ${widget.players.length} players");
     try {
-      // Log hole data
-      for (var hole in widget.holes) {
-        debugPrint("ScoreCardWidget: Hole: number=${hole.number}, name=${hole.name}, par=${hole.par}");
-      }
-
       // Handle empty or invalid data
       if (widget.holes.isEmpty || widget.players.isEmpty) {
-        debugPrint("ScoreCardWidget: No holes or players available");
         return const Center(child: Text('No holes or players available', style: TextStyle(color: Colors.redAccent)));
       }
 
       // Filter out any invalid players
       final validPlayers = widget.players.where((player) => player.name.isNotEmpty).toList();
       if (validPlayers.isEmpty) {
-        debugPrint("ScoreCardWidget: No valid players after filtering");
         return const Center(child: Text('No valid players available', style: TextStyle(color: Colors.redAccent)));
       }
 
       // Filter out any invalid holes
       final validHoles = widget.holes.where((hole) => hole.number > 0).toList();
       if (validHoles.isEmpty) {
-        debugPrint("ScoreCardWidget: No valid holes after filtering");
         return const Center(child: Text('No valid holes available', style: TextStyle(color: Colors.redAccent)));
       }
 
@@ -309,7 +278,6 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
       for (var entry in validHoles.asMap().entries) {
         final hole = entry.value;
         final globalIndex = entry.key; // Global index for onEditHole
-        debugPrint("ScoreCardWidget: Rendering hole ${hole.name} (number: ${hole.number}, par: ${hole.par}) at index: $globalIndex");
         holeTableRows.add(TableRow(
           children: [
             TableCell(
@@ -317,16 +285,11 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
                 padding: const EdgeInsets.all(8.0),
                 child: GestureDetector(
                   onTap: () {
-                    debugPrint("ScoreCardWidget: Tapped hole ${hole.name} at index $globalIndex");
                     try {
                       if (widget.onEditHole != null) {
-                        debugPrint("ScoreCardWidget: Calling onEditHole for hole ${hole.number}");
                         widget.onEditHole!(hole, globalIndex);
-                      } else {
-                        debugPrint("ScoreCardWidget: onEditHole callback is null");
                       }
-                    } catch (e, stackTrace) {
-                      debugPrint("ScoreCardWidget: Error in onEditHole: $e\nStack trace: $stackTrace");
+                    } catch (e) {
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Error editing/deleting hole')),
@@ -350,12 +313,10 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
             ...validPlayers.map((player) {
               final playerControllers = controllers[player.name];
               if (playerControllers == null) {
-                debugPrint("ScoreCardWidget: No controllers found for player ${player.name}");
                 return const TableCell(child: SizedBox());
               }
               final controller = playerControllers[hole.number];
               if (controller == null) {
-                debugPrint("ScoreCardWidget: Controller not found for player ${player.name}, hole ${hole.number}");
                 return const TableCell(child: SizedBox());
               }
               return TableCell(
@@ -514,24 +475,20 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
           ],
         ),
       );
-    } catch (e, stackTrace) {
-      debugPrint("ScoreCardWidget: Error in build: $e\nStack trace: $stackTrace");
+    } catch (e) {
       return const Center(child: Text('Error rendering scorecard', style: TextStyle(color: Colors.redAccent)));
     }
   }
 
   @override
   void dispose() {
-    debugPrint("ScoreCardWidget: dispose called");
     try {
       for (var playerControllers in controllers.values) {
         for (var controller in playerControllers.values) {
           controller.dispose();
         }
       }
-    } catch (e, stackTrace) {
-      debugPrint("ScoreCardWidget: Error in dispose: $e\nStack trace: $stackTrace");
-    }
+    } catch (e) {}
     super.dispose();
   }
 }

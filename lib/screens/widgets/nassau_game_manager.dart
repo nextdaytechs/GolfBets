@@ -70,18 +70,13 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
         int back9 = settings?.back9Bet ?? 1;
         int overall = settings?.overallBet ?? 1;
         int skinsPoints = settings?.skinsPoints ?? 1;
-        bool enableSkins = settings?.enableSkins ?? false; // New toggle for enabling Skins
-        final handicaps = settings?.handicaps != null
-            ? Map<String, int>.from(settings!.handicaps)
-            : {for (var p in widget.players) p.name: p.handicap};
+        bool enableSkins = settings?.enableSkins ?? false;
+        final handicaps = {for (var p in widget.players) p.name: p.handicap}; // Use Player.handicap
 
         final front9Controller = TextEditingController(text: front9.toString());
         final back9Controller = TextEditingController(text: back9.toString());
         final overallController = TextEditingController(text: overall.toString());
         final skinsPointsController = TextEditingController(text: skinsPoints.toString());
-        final handicapControllers = {
-          for (var p in widget.players) p.name: TextEditingController(text: handicaps[p.name].toString())
-        };
 
         return StatefulBuilder(
           builder: (context, setState) {
@@ -107,24 +102,6 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
                         },
                       )).toList(),
                     ),
-                    const SizedBox(height: 16),
-                    const Text("Handicaps:", style: TextStyle(fontWeight: FontWeight.bold)),
-                    ...widget.players.map((p) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          SizedBox(width: 100, child: Text(p.name)),
-                          Expanded(
-                            child: TextField(
-                              decoration: const InputDecoration(labelText: "Handicap", border: OutlineInputBorder()),
-                              keyboardType: TextInputType.number,
-                              controller: handicapControllers[p.name],
-                              onChanged: (val) => handicaps[p.name] = int.tryParse(val) ?? 0,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )),
                     const SizedBox(height: 16),
                     TextField(
                       decoration: const InputDecoration(labelText: "Front 9 Bet", prefixIcon: Icon(Icons.attach_money, color: Colors.amber), border: OutlineInputBorder()),

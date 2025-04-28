@@ -15,7 +15,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
   bool isLoading = true;
   final _nameController = TextEditingController();
   final _handicapController = TextEditingController();
-  final _nameFocusNode = FocusNode(); // Added FocusNode for name field
+  final _nameFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -28,12 +28,11 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
     try {
       if (Hive.isBoxOpen('playerBox')) {
         players = playerBox.values.toList();
-        debugPrint("Loaded ${players.length} players");
-      } else {
-        debugPrint("playerBox not open");
       }
     } catch (e) {
-      debugPrint("Error loading players: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error loading players')),
+      );
     }
     setState(() => isLoading = false);
   }
@@ -50,13 +49,24 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
         setState(() {
           players = playerBox.values.toList();
         });
-        FocusScope.of(context).requestFocus(_nameFocusNode); // Set focus to name field
+        FocusScope.of(context).requestFocus(_nameFocusNode);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Player $name added!'),
             backgroundColor: Colors.green[600],
           ),
         );
+        // Clear game settings to disable Nassau and Skins games
+        if (Hive.isBoxOpen('nassauSettingsBox') && Hive.isBoxOpen('skinsSettingsBox')) {
+          nassauSettingsBox.clear();
+          skinsSettingsBox.clear();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Nassau and Skins games disabled due to player changes'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -117,6 +127,17 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                     backgroundColor: Colors.green[600],
                   ),
                 );
+                // Clear game settings to disable Nassau and Skins games
+                if (Hive.isBoxOpen('nassauSettingsBox') && Hive.isBoxOpen('skinsSettingsBox')) {
+                  nassauSettingsBox.clear();
+                  skinsSettingsBox.clear();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Nassau and Skins games disabled due to player changes'),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
               }
             },
             child: const Text('Save', style: TextStyle(color: Colors.green)),
@@ -139,6 +160,17 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
           backgroundColor: Colors.redAccent,
         ),
       );
+      // Clear game settings to disable Nassau and Skins games
+      if (Hive.isBoxOpen('nassauSettingsBox') && Hive.isBoxOpen('skinsSettingsBox')) {
+        nassauSettingsBox.clear();
+        skinsSettingsBox.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nassau and Skins games disabled due to player changes'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error: Player data not available')),
@@ -184,7 +216,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                   Expanded(
                     child: TextField(
                       controller: _nameController,
-                      focusNode: _nameFocusNode, // Attach FocusNode to TextField
+                      focusNode: _nameFocusNode,
                       decoration: const InputDecoration(
                         labelText: 'Player Name',
                         border: OutlineInputBorder(),
@@ -267,7 +299,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
   void dispose() {
     _nameController.dispose();
     _handicapController.dispose();
-    _nameFocusNode.dispose(); // Dispose FocusNode
+    _nameFocusNode.dispose();
     super.dispose();
   }
 }

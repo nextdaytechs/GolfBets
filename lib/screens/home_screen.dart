@@ -31,22 +31,17 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       if (Hive.isBoxOpen('playerBox')) {
         players = playerBox.values.toList();
-      } else {
-        debugPrint("playerBox not open");
       }
       if (Hive.isBoxOpen('holeBox')) {
         holes = holeBox.values.toList();
-      } else {
-        debugPrint("holeBox not open");
       }
       if (Hive.isBoxOpen('scoreBox')) {
         scores = scoreBox.values.toList();
-      } else {
-        debugPrint("scoreBox not open");
       }
-      debugPrint("Loaded ${players.length} players, ${holes.length} holes, ${scores.length} scores");
     } catch (e) {
-      debugPrint("Error loading data: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error loading data')),
+      );
     }
     setState(() => isLoading = false);
   }
@@ -188,7 +183,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
 
 
 
