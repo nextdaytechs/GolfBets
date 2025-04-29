@@ -29,22 +29,35 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
   late Box<ScoreEntry> scoreBox;
   bool isLoading = true;
   bool _isDisablingGames = false; // Guard to prevent recursive disable calls
+  final _snackBarQueue = <String>[]; // Queue for SnackBar messages
+  bool _isShowingSnackBar = false; // Flag to track active SnackBar
+  List<Player> _players = []; // Cached players
+  List<Hole> _holes = []; // Cached holes
+  List<ScoreEntry> _scores = []; // Cached scores
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      print('ScoreEntryScreen: Tab changed to index ${_tabController.index}');
+    });
     _initializeHiveBoxes();
   }
 
   Future<void> _initializeHiveBoxes() async {
     print('ScoreEntryScreen: Initializing Hive boxes');
+    final stopwatch = Stopwatch()..start();
     setState(() => isLoading = true);
     try {
       playerBox = await Hive.openBox<Player>('playerBox');
       holeBox = await Hive.openBox<Hole>('holeBox');
       scoreBox = await Hive.openBox<ScoreEntry>('scoreBox');
-      print('ScoreEntryScreen: Hive boxes opened successfully');
+      // Preload data to avoid synchronous reads in build
+      _players = playerBox.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+      _holes = holeBox.values.toList()..sort((a, b) => b.number.compareTo(a.number));
+      _scores = scoreBox.values.toList();
+      print('ScoreEntryScreen: Hive boxes opened and data preloaded in ${stopwatch.elapsedMilliseconds}ms');
       if (widget.resetGames && !_isDisablingGames) {
         // Defer game disabling to avoid main thread overload
         Future.microtask(() {
@@ -55,13 +68,11 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
     } catch (e) {
       print('ScoreEntryScreen: Error initializing Hive boxes: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error initializing data: $e')),
-      );
+      _queueSnackBar('Error initializing data: $e');
     } finally {
       if (mounted) {
         setState(() => isLoading = false);
-        print('ScoreEntryScreen: Initialization complete, isLoading set to false');
+        print('ScoreEntryScreen: Initialization complete in ${stopwatch.elapsedMilliseconds}ms');
       }
     }
   }
@@ -82,28 +93,36 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
       context,
       MaterialPageRoute(
         builder: (context) => PlayerManagementScreen(
-          onPlayersChanged: _disableAllGames, // Callback to disable games
+          onPlayersChanged: () {
+            _disableAllGames();
+            // Update cached players
+            _players = playerBox.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+          },
         ),
       ),
     );
     print('ScoreEntryScreen: Returned from PlayerManagementScreen, disabling games');
-    _disableAllGames(); // Ensure games are disabled after returning
+    _disableAllGames();
   }
 
   void _newGame() {
     print('ScoreEntryScreen: Starting new game');
+    final stopwatch = Stopwatch()..start();
     try {
       // Batch state updates to reduce rebuilds
       if (Hive.isBoxOpen('playerBox')) {
         playerBox.clear();
+        _players.clear();
         print('ScoreEntryScreen: Cleared playerBox');
       }
       if (Hive.isBoxOpen('holeBox')) {
         holeBox.clear();
+        _holes.clear();
         print('ScoreEntryScreen: Cleared holeBox');
       }
       if (Hive.isBoxOpen('scoreBox')) {
         scoreBox.clear();
+        _scores.clear();
         print('ScoreEntryScreen: Cleared scoreBox');
       }
       if (Hive.isBoxOpen('nassausettingbox')) {
@@ -115,20 +134,13 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
         print('ScoreEntryScreen: Cleared skinssettingbox');
       }
       _disableAllGames(); // Explicitly disable game managers
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('New game started! All games disabled. Please add players.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      print('ScoreEntryScreen: Showing new game SnackBar');
+      _queueSnackBar('New game started! All games disabled. Please add players.', backgroundColor: Colors.green);
       // Single setState to minimize rebuilds
       setState(() {});
+      print('ScoreEntryScreen: New game completed in ${stopwatch.elapsedMilliseconds}ms');
     } catch (e) {
       print('ScoreEntryScreen: Error in newGame: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error starting new game: $e')),
-      );
+      _queueSnackBar('Error starting new game: $e');
     }
   }
 
@@ -139,10 +151,10 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: const Text('Whittier Skins Game Rules', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const SingleChildScrollView(
+        content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+            children: const [
               Text('Objective: Compete in a match play format where every player challenges every other player to win individual holes, earning points for each victory.'),
               SizedBox(height: 8),
               Text('Setup:'),
@@ -187,10 +199,10 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: const Text('Nassau Game Rules', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const SingleChildScrollView(
+        content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+            children: const [
               Text('Objective: Compete in a stroke play format across three bets—Front 9, Back 9, and Overall—based on the lowest handicap-adjusted scores, with an optional Skins side bet for winning individual holes in match play.'),
               SizedBox(height: 8),
               Text('Setup:'),
@@ -233,42 +245,57 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
     );
   }
 
+  void _queueSnackBar(String message, {Color? backgroundColor}) {
+    _snackBarQueue.add(message);
+    _showNextSnackBar(backgroundColor: backgroundColor);
+  }
+
+  void _showNextSnackBar({Color? backgroundColor}) {
+    if (_isShowingSnackBar || _snackBarQueue.isEmpty || !mounted) return;
+    _isShowingSnackBar = true;
+    final message = _snackBarQueue.removeAt(0);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor ?? Theme.of(context).snackBarTheme.backgroundColor,
+        duration: const Duration(milliseconds: 800),
+      ),
+    ).closed.then((_) {
+      _isShowingSnackBar = false;
+      _showNextSnackBar(backgroundColor: backgroundColor);
+    });
+  }
+
   void _disableAllGames() {
     if (_isDisablingGames) {
       print('ScoreEntryScreen: Skipping disableAllGames to prevent recursion');
       return;
     }
     print('ScoreEntryScreen: Disabling all games');
+    final stopwatch = Stopwatch()..start();
     _isDisablingGames = true;
     try {
       _skinsKey.currentState?.disable();
       _nassauKey.currentState?.disable();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All games disabled.'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      _queueSnackBar('All games disabled.', backgroundColor: Colors.redAccent);
       // Force rebuild to ensure UI updates
       if (mounted) {
         setState(() {});
-        print('ScoreEntryScreen: UI rebuilt after disabling games');
+        print('ScoreEntryScreen: UI rebuilt after disabling games in ${stopwatch.elapsedMilliseconds}ms');
       }
     } catch (e) {
       print('ScoreEntryScreen: Error disabling games: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error disabling games')),
-      );
+      _queueSnackBar('Error disabling games');
     } finally {
       _isDisablingGames = false;
-      print('ScoreEntryScreen: DisableAllGames completed');
+      print('ScoreEntryScreen: DisableAllGames completed in ${stopwatch.elapsedMilliseconds}ms');
     }
   }
 
   void _addHole() {
-    print('ScoreEntryScreen: Opening Add Hole dialog');
+    print('ScoreEntryScreen: Opening Add Hole dialog, current tab index: ${_tabController.index}');
     _holeNameController.clear();
     _parController.text = '4';
     _handicapRatingController.text = '0';
@@ -289,7 +316,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               TextField(
                 controller: _parController,
                 decoration: const InputDecoration(
@@ -298,7 +325,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                 ),
                 keyboardType: TextInputType.number,
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               TextField(
                 controller: _handicapRatingController,
                 decoration: const InputDecoration(
@@ -317,29 +344,26 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
           ),
           TextButton(
             onPressed: () async {
+              print('ScoreEntryScreen: Add Hole dialog: Add button pressed');
               final name = _holeNameController.text.trim();
               final par = int.tryParse(_parController.text.trim()) ?? 4;
               final handicapRating = int.tryParse(_handicapRatingController.text.trim()) ?? 0;
 
               if (name.isEmpty) {
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a hole name')),
-                );
+                _queueSnackBar('Please enter a hole name');
                 return;
               }
 
               try {
                 if (!Hive.isBoxOpen('holeBox')) {
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Error: Hole data not available')),
-                  );
+                  _queueSnackBar('Error: Hole data not available');
                   return;
                 }
 
                 // Auto-generate hole number (highest number + 1 to appear at the top)
-                final currentHoles = Hive.box<Hole>('holeBox').values.toList();
+                final currentHoles = _holes;
                 int nextNumber = 1; // Default if no holes exist
                 if (currentHoles.isNotEmpty) {
                   final highestNumber = currentHoles
@@ -348,31 +372,30 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                   nextNumber = highestNumber + 1;
                 }
 
-                await Hive.box<Hole>('holeBox').add(Hole(
+                final newHole = Hole(
                   number: nextNumber,
                   name: name,
                   par: par,
                   handicapRating: handicapRating,
-                ));
-                Navigator.pop(context);
+                );
+                await Hive.box<Hole>('holeBox').add(newHole);
+                Navigator.pop(context); // Close dialog
                 if (mounted) {
-                  // Switch to Scorecard tab and refresh UI
-                  _tabController.animateTo(0);
-                  setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Hole "$name" added!'),
-                      backgroundColor: Colors.green[600],
-                    ),
-                  );
-                  print('ScoreEntryScreen: Hole "$name" added, switched to Scorecard tab');
+                  // Update cached holes and tab index in one setState
+                  setState(() {
+                    _holes = [..._holes, newHole]..sort((a, b) => b.number.compareTo(a.number));
+                    if (_tabController.index != 0) {
+                      print('ScoreEntryScreen: Setting tab index to 0 from index: ${_tabController.index}');
+                      _tabController.index = 0;
+                    }
+                  });
+                  _queueSnackBar('Hole "$name" added!', backgroundColor: Colors.green[600]);
+                  print('ScoreEntryScreen: Hole "$name" added, final tab index: ${_tabController.index}');
                 }
               } catch (e) {
                 print('ScoreEntryScreen: Error adding hole: $e');
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error adding hole: $e')),
-                );
+                _queueSnackBar('Error adding hole: $e');
               }
             },
             child: const Text('Add', style: TextStyle(color: Colors.green)),
@@ -404,7 +427,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               TextField(
                 controller: _parController,
                 decoration: const InputDecoration(
@@ -413,7 +436,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                 ),
                 keyboardType: TextInputType.number,
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               TextField(
                 controller: _handicapRatingController,
                 decoration: const InputDecoration(
@@ -435,20 +458,16 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
               try {
                 if (!Hive.isBoxOpen('holeBox') || !Hive.isBoxOpen('scoreBox')) {
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Error: Data not available')),
-                  );
+                  _queueSnackBar('Error: Data not available');
                   return;
                 }
 
                 // Find the correct index in holeBox by matching the hole object
-                final allHoles = holeBox.values.toList();
+                final allHoles = _holes;
                 final actualIndex = allHoles.indexWhere((h) => h.number == hole.number && h.name == hole.name);
                 if (actualIndex == -1) {
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Error: Hole not found')),
-                  );
+                  _queueSnackBar('Error: Hole not found');
                   return;
                 }
 
@@ -463,23 +482,19 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                   await score.delete();
                 }
 
-                Navigator.pop(context);
+                Navigator.pop(context); // Close dialog
                 if (mounted) {
-                  setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Hole "${hole.name}" deleted!'),
-                      backgroundColor: Colors.redAccent,
-                    ),
-                  );
+                  setState(() {
+                    _holes.removeAt(actualIndex);
+                    _scores = scoreBox.values.toList();
+                  });
+                  _queueSnackBar('Hole "${hole.name}" deleted!', backgroundColor: Colors.redAccent);
                   print('ScoreEntryScreen: Hole "${hole.name}" deleted');
                 }
               } catch (e) {
                 print('ScoreEntryScreen: Error deleting hole: $e');
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error deleting hole: $e')),
-                );
+                _queueSnackBar('Error deleting hole: $e');
               }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
@@ -492,59 +507,46 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
 
               if (name.isEmpty) {
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a hole name')),
-                );
+                _queueSnackBar('Please enter a hole name');
                 return;
               }
 
               try {
                 if (!Hive.isBoxOpen('holeBox')) {
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Error: Hole data not available')),
-                  );
+                  _queueSnackBar('Error: Hole data not available');
                   return;
                 }
 
                 // Find the correct index in holeBox
-                final allHoles = holeBox.values.toList();
+                final allHoles = _holes;
                 final actualIndex = allHoles.indexWhere((h) => h.number == hole.number && h.name == hole.name);
                 if (actualIndex == -1) {
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Error: Hole not found')),
-                  );
+                  _queueSnackBar('Error: Hole not found');
                   return;
                 }
 
                 // Update the hole
-                await holeBox.putAt(
-                  actualIndex,
-                  Hole(
-                    number: hole.number,
-                    name: name,
-                    par: par,
-                    handicapRating: handicapRating,
-                  ),
+                final updatedHole = Hole(
+                  number: hole.number,
+                  name: name,
+                  par: par,
+                  handicapRating: handicapRating,
                 );
-                Navigator.pop(context);
+                await holeBox.putAt(actualIndex, updatedHole);
+                Navigator.pop(context); // Close dialog
                 if (mounted) {
-                  setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Hole "$name" updated!'),
-                      backgroundColor: Colors.green[600],
-                    ),
-                  );
+                  setState(() {
+                    _holes[actualIndex] = updatedHole;
+                  });
+                  _queueSnackBar('Hole "$name" updated!', backgroundColor: Colors.green[600]);
                   print('ScoreEntryScreen: Hole "$name" updated');
                 }
               } catch (e) {
                 print('ScoreEntryScreen: Error editing hole: $e');
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error editing hole: $e')),
-                );
+                _queueSnackBar('Error editing hole: $e');
               }
             },
             child: const Text('Save', style: TextStyle(color: Colors.green)),
@@ -564,249 +566,190 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
     }
 
     print('ScoreEntryScreen: Building UI');
-    return ValueListenableBuilder(
-      valueListenable: playerBox.listenable(),
-      builder: (context, Box<Player> playerBoxListenable, _) {
-        return ValueListenableBuilder(
-          valueListenable: holeBox.listenable(),
-          builder: (context, Box<Hole> holeBoxListenable, _) {
-            if (!Hive.isBoxOpen('holeBox') || !Hive.isBoxOpen('playerBox') || !Hive.isBoxOpen('scoreBox')) {
-              print('ScoreEntryScreen: Error: Hive boxes not open');
-              return const Scaffold(
-                body: Center(child: Text('Error: Data not available', style: TextStyle(color: Colors.redAccent))),
-              );
-            }
-
-            final List<Player> players = playerBox.values.toList()..sort((a, b) => a.name.compareTo(b.name));
-            final List<Hole> holes = holeBoxListenable.values.toList()..sort((a, b) => b.number.compareTo(a.number));
-            final List<ScoreEntry> scores = scoreBox.values.toList();
-
-            print('ScoreEntryScreen: Rendering with ${players.length} players and ${holes.length} holes');
-            return Scaffold(
-              appBar: AppBar(
-                automaticallyImplyLeading: false,
-                title: const Text('Enter Scores', style: TextStyle(color: Colors.white)),
-                flexibleSpace: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.green[700]!, Colors.green[400]!],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                ),
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(48.0 + 60.0), // TabBar height + button row height
-                  child: Column(
-                    children: [
-                      TabBar(
-                        controller: _tabController,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: Colors.white70,
-                        indicatorColor: Colors.white,
-                        tabs: const [
-                          Tab(text: 'Scorecard'),
-                          Tab(text: 'Games'),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            ElevatedButton(
-                              onPressed: _showPlayerManagement,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green[600],
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  side: const BorderSide(color: Colors.white, width: 1),
-                                ),
-                                fixedSize: const Size(60, 60),
-                                padding: EdgeInsets.zero,
-                                elevation: 4,
-                                shadowColor: Colors.black.withValues(alpha: 0.5),
-                              ),
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text('Add', style: TextStyle(fontSize: 12, color: Colors.white)),
-                                  Text('Players', style: TextStyle(fontSize: 12, color: Colors.white)),
-                                ],
-                              ),
-                            ),
-                            ElevatedButton(
-                              onPressed: _addHole,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green[600],
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  side: const BorderSide(color: Colors.white, width: 1),
-                                ),
-                                fixedSize: const Size(60, 60),
-                                padding: EdgeInsets.zero,
-                                elevation: 4,
-                                shadowColor: Colors.black.withValues(alpha: 0.5),
-                              ),
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text('Add', style: TextStyle(fontSize: 12, color: Colors.white)),
-                                  Text('Hole', style: TextStyle(fontSize: 12, color: Colors.white)),
-                                ],
-                              ),
-                            ),
-                            ElevatedButton(
-                              onPressed: _newGame,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green[600],
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  side: const BorderSide(color: Colors.white, width: 1),
-                                ),
-                                fixedSize: const Size(60, 60),
-                                padding: EdgeInsets.zero,
-                                elevation: 4,
-                                shadowColor: Colors.black.withValues(alpha: 0.5),
-                              ),
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text('New', style: TextStyle(fontSize: 12, color: Colors.white)),
-                                  Text('Game', style: TextStyle(fontSize: 12, color: Colors.white)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Enter Scores', style: TextStyle(color: Colors.white)),
+        backgroundColor: const Color(0xFF4CAF50), // Simplified to single color
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48.0 + 60.0), // TabBar height + button row height
+          child: Column(
+            children: [
+              TabBar(
+                controller: _tabController,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white70,
+                indicatorColor: Colors.white,
+                tabs: const [
+                  Tab(text: 'Scorecard'),
+                  Tab(text: 'Games'),
+                ],
               ),
-              body: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.green[50]!, Colors.white],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                child: TabBarView(
-                  controller: _tabController,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            children: [
-                              if (players.isEmpty)
-                                const Center(
-                                  child: Text(
-                                    'No players added.\nTap the Add Players button to add players.',
-                                    style: TextStyle(fontSize: 18, color: Colors.redAccent),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                )
-                              else if (players.isNotEmpty && holes.isEmpty)
-                                Center(
-                                  child: Text(
-                                    'Players Added: ${players.map((p) => p.name).join(', ')}\nPlease add holes to start scoring.',
-                                    style: const TextStyle(fontSize: 18, color: Colors.green),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                )
-                              else
-                                ScoreCardWidget(
-                                  players: players,
-                                  holes: holes,
-                                  scores: scores,
-                                  onScoreChanged: () {
-                                    if (mounted) {
-                                      setState(() {});
-                                    }
-                                  },
-                                  onEditHole: _editHole,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    _buildTabButton(
+                      onPressed: _showPlayerManagement,
+                      label1: 'Add',
+                      label2: 'Players',
                     ),
-                    SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Available Games',
-                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
-                              ),
-                              TextButton(
-                                onPressed: _disableAllGames,
-                                child: const Text("Reset All Games", style: TextStyle(color: Colors.redAccent)),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Card(
-                                  elevation: 4,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: SkinsGameManager(key: _skinsKey, scores: scores, players: players),
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.info_outline, color: Colors.green),
-                                onPressed: _showSkinsRules,
-                                tooltip: 'Whittier Skins Game Rules',
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Card(
-                                  elevation: 4,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: NassauGameManager(key: _nassauKey, scores: scores, players: players),
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.info_outline, color: Colors.green),
-                                onPressed: _showNassauRules,
-                                tooltip: 'Nassau Game Rules',
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    _buildTabButton(
+                      onPressed: _addHole,
+                      label1: 'Add',
+                      label2: 'Hole',
+                    ),
+                    _buildTabButton(
+                      onPressed: _newGame,
+                      label1: 'New',
+                      label2: 'Game',
                     ),
                   ],
                 ),
               ),
-            );
-          },
-        );
-      },
+            ],
+          ),
+        ),
+      ),
+      body: Container(
+        color: const Color(0xFFF5FFFA), // Simplified to single color
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+                      if (_players.isEmpty)
+                        const Center(
+                          child: Text(
+                            'No players added.\nTap the Add Players button to add players.',
+                            style: TextStyle(fontSize: 18, color: Colors.redAccent),
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      else if (_players.isNotEmpty && _holes.isEmpty)
+                        Center(
+                          child: Text(
+                            'Players Added: ${_players.map((p) => p.name).join(', ')}\nPlease add holes to start scoring.',
+                            style: const TextStyle(fontSize: 18, color: Colors.green),
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      else
+                        ScoreCardWidget(
+                          players: _players,
+                          holes: _holes,
+                          scores: _scores,
+                          onScoreChanged: () {
+                            if (mounted) {
+                              setState(() {
+                                _scores = scoreBox.values.toList();
+                              });
+                            }
+                          },
+                          onEditHole: _editHole,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Available Games',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                      ),
+                      TextButton(
+                        onPressed: _disableAllGames,
+                        child: const Text("Reset All Games", style: TextStyle(color: Colors.redAccent)),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: SkinsGameManager(key: _skinsKey, scores: _scores, players: _players),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.info_outline, color: Colors.green),
+                        onPressed: _showSkinsRules,
+                        tooltip: 'Whittier Skins Game Rules',
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: NassauGameManager(key: _nassauKey, scores: _scores, players: _players),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.info_outline, color: Colors.green),
+                        onPressed: _showNassauRules,
+                        tooltip: 'Nassau Game Rules',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabButton({required VoidCallback onPressed, required String label1, required String label2}) {
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        backgroundColor: const Color(0xFF388E3C),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: Colors.white, width: 1),
+        ),
+        fixedSize: const Size(60, 60),
+        padding: EdgeInsets.zero,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label1, style: const TextStyle(fontSize: 12)),
+          Text(label2, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
     );
   }
 }

@@ -4,6 +4,7 @@ import '../../models/player.dart';
 import '../../models/score_entry.dart';
 import '../../models/nassau_settings.dart';
 import 'nassau_game_screen.dart';
+//import '../../main.dart';
 
 class NassauGameManager extends StatefulWidget {
   final List<ScoreEntry> scores;
@@ -30,6 +31,7 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
 
   Future<void> _loadSavedSettings() async {
     print('NassauGameManager: Loading saved settings');
+    final stopwatch = Stopwatch()..start();
     try {
       final nassauBox = await Hive.openBox('nassausettingbox');
       if (nassauBox.containsKey('nassauSettings')) {
@@ -38,47 +40,58 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
           setState(() {
             settings = savedSettings;
             isEnabled = true;
-            print('NassauGameManager: Settings loaded, isEnabled = true');
+            print('NassauGameManager: Settings loaded, isEnabled = true in ${stopwatch.elapsedMilliseconds}ms');
           });
         } else {
           setState(() {
             isEnabled = false;
             settings = null;
-            print('NassauGameManager: No valid settings, isEnabled = false');
+            print('NassauGameManager: No valid settings, isEnabled = false in ${stopwatch.elapsedMilliseconds}ms');
           });
         }
       } else {
         setState(() {
           isEnabled = false;
           settings = null;
-          print('NassauGameManager: No settings key, isEnabled = false');
+          print('NassauGameManager: No settings key, isEnabled = false in ${stopwatch.elapsedMilliseconds}ms');
         });
       }
     } catch (e) {
       print('NassauGameManager: Error loading settings: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading Nassau settings: $e')),
+        SnackBar(
+          content: Text('Error loading Nassau settings: $e'),
+          duration: const Duration(milliseconds: 1500),
+        ),
       );
     }
   }
 
   Future<void> _saveSettings(NassauSettings newSettings) async {
     print('NassauGameManager: Saving new settings');
+    final stopwatch = Stopwatch()..start();
     try {
       final nassauBox = await Hive.openBox('nassausettingbox');
       await nassauBox.put('nassauSettings', newSettings);
       setState(() {
         settings = newSettings;
         isEnabled = true;
-        print('NassauGameManager: Settings saved, isEnabled = true');
+        print('NassauGameManager: Settings saved, isEnabled = true in ${stopwatch.elapsedMilliseconds}ms');
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Nassau Game Enabled!'), backgroundColor: Colors.green[600]),
+        SnackBar(
+          content: const Text('Nassau Game Enabled!'),
+          backgroundColor: Colors.green[600],
+          duration: const Duration(milliseconds: 1500),
+        ),
       );
     } catch (e) {
       print('NassauGameManager: Error saving settings: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving Nassau settings: $e')),
+        SnackBar(
+          content: Text('Error saving Nassau settings: $e'),
+          duration: const Duration(milliseconds: 1500),
+        ),
       );
     }
   }
@@ -88,7 +101,11 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
     if (usePrevious && settings != null) {
       setState(() => isEnabled = true);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Nassau Game Enabled with Previous Settings!'), backgroundColor: Colors.green[600]),
+        SnackBar(
+          content: const Text('Nassau Game Enabled with Previous Settings!'),
+          backgroundColor: Colors.green[600],
+          duration: const Duration(milliseconds: 1500),
+        ),
       );
       print('NassauGameManager: Enabled with previous settings');
       return;
@@ -237,39 +254,51 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
 
   Future<void> disable() async {
     print('NassauGameManager: Disabling game');
+    final stopwatch = Stopwatch()..start();
     try {
       final nassauBox = await Hive.openBox('nassausettingbox');
       await nassauBox.delete('nassauSettings'); // Clear settings from box
       setState(() {
         isEnabled = false;
         settings = null;
-        print('NassauGameManager: Disabled, isEnabled = false, settings = null');
+        print('NassauGameManager: Disabled, isEnabled = false, settings = null in ${stopwatch.elapsedMilliseconds}ms');
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Nassau Game Disabled'), backgroundColor: Colors.redAccent),
+        SnackBar(
+          content: const Text('Nassau Game Disabled'),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(milliseconds: 1500),
+        ),
       );
     } catch (e) {
       print('NassauGameManager: Error disabling game: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error disabling Nassau game: $e')),
+        SnackBar(
+          content: Text('Error disabling Nassau game: $e'),
+          duration: const Duration(milliseconds: 1500),
+        ),
       );
     }
   }
 
   Future<void> reset() async {
     print('NassauGameManager: Resetting game');
+    final stopwatch = Stopwatch()..start();
     try {
       final nassauBox = await Hive.openBox('nassausettingbox');
       await nassauBox.delete('nassauSettings'); // Clear settings from box
       setState(() {
         isEnabled = false;
         settings = null;
-        print('NassauGameManager: Reset, isEnabled = false, settings = null');
+        print('NassauGameManager: Reset, isEnabled = false, settings = null in ${stopwatch.elapsedMilliseconds}ms');
       });
     } catch (e) {
       print('NassauGameManager: Error resetting game: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error resetting Nassau game: $e')),
+        SnackBar(
+          content: Text('Error resetting Nassau game: $e'),
+          duration: const Duration(milliseconds: 1500),
+        ),
       );
     }
   }
@@ -318,6 +347,7 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
                               SnackBar(
                                 content: const Text('Nassau Game Enabled with Previous Settings!'),
                                 backgroundColor: Colors.green[600],
+                                duration: const Duration(milliseconds: 1500),
                               ),
                             );
                             print('NassauGameManager: Enabled with previous settings via dialog');

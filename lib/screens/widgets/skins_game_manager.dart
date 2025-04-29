@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../models/player.dart';
 import '../../models/score_entry.dart';
 import '../../models/skins_settings.dart';
 import 'skins_game_screen.dart';
-import '../../main.dart';
+//import '../../main.dart';
 
 class SkinsGameManager extends StatefulWidget {
   final List<ScoreEntry> scores;
@@ -28,46 +29,71 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
     _loadSavedSettings();
   }
 
-  void _loadSavedSettings() {
+  Future<void> _loadSavedSettings() async {
     print('SkinsGameManager: Loading saved settings');
-    if (skinsSettingsBox.containsKey('skinsSettings')) {
-      final savedSettings = skinsSettingsBox.get('skinsSettings');
-      if (savedSettings != null) {
-        setState(() {
-          settings = savedSettings;
-          isEnabled = true;
-          print('SkinsGameManager: Settings loaded, isEnabled = true');
-        });
+    final stopwatch = Stopwatch()..start();
+    try {
+      final skinsBox = await Hive.openBox('skinssettingbox');
+      if (skinsBox.containsKey('skinsSettings')) {
+        final savedSettings = skinsBox.get('skinsSettings');
+        if (savedSettings != null) {
+          setState(() {
+            settings = savedSettings;
+            isEnabled = true;
+            print('SkinsGameManager: Settings loaded, isEnabled = true in ${stopwatch.elapsedMilliseconds}ms');
+          });
+        } else {
+          setState(() {
+            isEnabled = false;
+            settings = null;
+            print('SkinsGameManager: No valid settings, isEnabled = false in ${stopwatch.elapsedMilliseconds}ms');
+          });
+        }
       } else {
         setState(() {
           isEnabled = false;
           settings = null;
-          print('SkinsGameManager: No valid settings, isEnabled = false');
+          print('SkinsGameManager: No settings key, isEnabled = false in ${stopwatch.elapsedMilliseconds}ms');
         });
       }
-    } else {
-      setState(() {
-        isEnabled = false;
-        settings = null;
-        print('SkinsGameManager: No settings key, isEnabled = false');
-      });
+    } catch (e) {
+      print('SkinsGameManager: Error loading settings: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading Skins settings: $e'),
+          duration: const Duration(milliseconds: 1500),
+        ),
+      );
     }
   }
 
-  void _saveSettings(SkinsSettings newSettings) {
+  Future<void> _saveSettings(SkinsSettings newSettings) async {
     print('SkinsGameManager: Saving new settings');
-    skinsSettingsBox.put('skinsSettings', newSettings);
-    setState(() {
-      settings = newSettings;
-      isEnabled = true;
-      print('SkinsGameManager: Settings saved, isEnabled = true');
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Skins Game Enabled!'),
-        backgroundColor: Colors.green[600],
-      ),
-    );
+    final stopwatch = Stopwatch()..start();
+    try {
+      final skinsBox = await Hive.openBox('skinssettingbox');
+      await skinsBox.put('skinsSettings', newSettings);
+      setState(() {
+        settings = newSettings;
+        isEnabled = true;
+        print('SkinsGameManager: Settings saved, isEnabled = true in ${stopwatch.elapsedMilliseconds}ms');
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Skins Game Enabled!'),
+          backgroundColor: Colors.green[600],
+          duration: const Duration(milliseconds: 1500),
+        ),
+      );
+    } catch (e) {
+      print('SkinsGameManager: Error saving settings: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving Skins settings: $e'),
+          duration: const Duration(milliseconds: 1500),
+        ),
+      );
+    }
   }
 
   void _openSetup({bool usePrevious = false}) async {
@@ -80,6 +106,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
         SnackBar(
           content: const Text('Skins Game Enabled with Previous Settings!'),
           backgroundColor: Colors.green[600],
+          duration: const Duration(milliseconds: 1500),
         ),
       );
       print('SkinsGameManager: Enabled with previous settings');
@@ -219,34 +246,59 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
     );
 
     if (result != null) {
-      _saveSettings(result);
+      await _saveSettings(result);
     }
   }
 
-  void disable() {
+  Future<void> disable() async {
     print('SkinsGameManager: Disabling game');
-    skinsSettingsBox.delete('skinsSettings'); // Clear settings from box
-    setState(() {
-      isEnabled = false;
-      settings = null;
-      print('SkinsGameManager: Disabled, isEnabled = false, settings = null');
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Skins Game Disabled'),
-        backgroundColor: Colors.redAccent,
-      ),
-    );
+    final stopwatch = Stopwatch()..start();
+    try {
+      final skinsBox = await Hive.openBox('skinssettingbox');
+      await skinsBox.delete('skinsSettings'); // Clear settings from box
+      setState(() {
+        isEnabled = false;
+        settings = null;
+        print('SkinsGameManager: Disabled, isEnabled = false, settings = null in ${stopwatch.elapsedMilliseconds}ms');
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Skins Game Disabled'),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(milliseconds: 1500),
+        ),
+      );
+    } catch (e) {
+      print('SkinsGameManager: Error disabling game: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error disabling Skins game: $e'),
+          duration: const Duration(milliseconds: 1500),
+        ),
+      );
+    }
   }
 
-  void reset() {
+  Future<void> reset() async {
     print('SkinsGameManager: Resetting game');
-    skinsSettingsBox.delete('skinsSettings'); // Clear settings from box
-    setState(() {
-      isEnabled = false;
-      settings = null;
-      print('SkinsGameManager: Reset, isEnabled = false, settings = null');
-    });
+    final stopwatch = Stopwatch()..start();
+    try {
+      final skinsBox = await Hive.openBox('skinssettingbox');
+      await skinsBox.delete('skinsSettings'); // Clear settings from box
+      setState(() {
+        isEnabled = false;
+        settings = null;
+        print('SkinsGameManager: Reset, isEnabled = false, settings = null in ${stopwatch.elapsedMilliseconds}ms');
+      });
+    } catch (e) {
+      print('SkinsGameManager: Error resetting game: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error resetting Skins game: $e'),
+          duration: const Duration(milliseconds: 1500),
+        ),
+      );
+    }
   }
 
   @override
@@ -289,6 +341,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
                               SnackBar(
                                 content: const Text('Skins Game Enabled with Previous Settings!'),
                                 backgroundColor: Colors.green[600],
+                                duration: const Duration(milliseconds: 1500),
                               ),
                             );
                             print('SkinsGameManager: Enabled with previous settings via dialog');
