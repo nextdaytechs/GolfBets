@@ -7,6 +7,7 @@ import 'widgets/score_card_widget.dart';
 import 'widgets/skins_game_manager.dart';
 import 'widgets/nassau_game_manager.dart';
 import 'player_management_screen.dart';
+import '../main.dart';
 
 class ScoreEntryScreen extends StatefulWidget {
   final bool resetGames; // Flag to force game reset on new game start
@@ -24,9 +25,6 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
   final _holeNameController = TextEditingController();
   final _parController = TextEditingController();
   final _handicapRatingController = TextEditingController();
-  late Box<Player> playerBox;
-  late Box<Hole> holeBox;
-  late Box<ScoreEntry> scoreBox;
   bool isLoading = true;
   bool _isDisablingGames = false; // Guard to prevent recursive disable calls
   final _snackBarQueue = <String>[]; // Queue for SnackBar messages
@@ -42,7 +40,8 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
     _tabController.addListener(() {
       print('ScoreEntryScreen: Tab changed to index ${_tabController.index}');
     });
-    _initializeHiveBoxes();
+    // Defer initialization to after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initializeHiveBoxes());
   }
 
   Future<void> _initializeHiveBoxes() async {
@@ -50,16 +49,17 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
     final stopwatch = Stopwatch()..start();
     setState(() => isLoading = true);
     try {
-      playerBox = await Hive.openBox<Player>('playerBox');
-      holeBox = await Hive.openBox<Hole>('holeBox');
-      scoreBox = await Hive.openBox<ScoreEntry>('scoreBox');
-      // Preload data to avoid synchronous reads in build
+      // Use pre-opened boxes from main.dart
+      final playerBox = Hive.box<Player>('playerBox');
+      final holeBox = Hive.box<Hole>('holeBox');
+      final scoreBox = Hive.box<ScoreEntry>('scoreBox');
+      // Preload data after first frame
       _players = playerBox.values.toList()..sort((a, b) => a.name.compareTo(b.name));
       _holes = holeBox.values.toList()..sort((a, b) => b.number.compareTo(a.number));
       _scores = scoreBox.values.toList();
-      print('ScoreEntryScreen: Hive boxes opened and data preloaded in ${stopwatch.elapsedMilliseconds}ms');
+      print('ScoreEntryScreen: Data preloaded in ${stopwatch.elapsedMilliseconds}ms');
       if (widget.resetGames && !_isDisablingGames) {
-        // Defer game disabling to avoid main thread overload
+        // Only disable games if resetGames is explicitly set
         Future.microtask(() {
           print('ScoreEntryScreen: Resetting games due to resetGames flag');
           _disableAllGames();
@@ -106,6 +106,35 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
   }
 
   void _newGame() {
+    print('ScoreEntryScreen: New Game button pressed, showing confirmation dialog');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Start New Game', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to start a new game? All existing players, holes, scores, and game data will be erased.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              print('ScoreEntryScreen: New Game canceled');
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel', style: TextStyle(color: Colors.redAccent)),
+          ),
+          TextButton(
+            onPressed: () {
+              print('ScoreEntryScreen: New Game confirmed');
+              Navigator.pop(context);
+              _startNewGame();
+            },
+            child: const Text('Confirm', style: TextStyle(color: Colors.green)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _startNewGame() {
     print('ScoreEntryScreen: Starting new game');
     final stopwatch = Stopwatch()..start();
     try {
@@ -126,11 +155,11 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
         print('ScoreEntryScreen: Cleared scoreBox');
       }
       if (Hive.isBoxOpen('nassausettingbox')) {
-        Hive.box('nassausettingbox').clear();
+        nassauSettingsBox.clear();
         print('ScoreEntryScreen: Cleared nassausettingbox');
       }
       if (Hive.isBoxOpen('skinssettingbox')) {
-        Hive.box('skinssettingbox').clear();
+        skinsSettingsBox.clear();
         print('ScoreEntryScreen: Cleared skinssettingbox');
       }
       _disableAllGames(); // Explicitly disable game managers
@@ -279,11 +308,13 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
       _nassauKey.currentState?.disable();
       if (!mounted) return;
       _queueSnackBar('All games disabled.', backgroundColor: Colors.redAccent);
-      // Force rebuild to ensure UI updates
-      if (mounted) {
-        setState(() {});
-        print('ScoreEntryScreen: UI rebuilt after disabling games in ${stopwatch.elapsedMilliseconds}ms');
-      }
+      // Defer rebuild to avoid jank
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {});
+          print('ScoreEntryScreen: UI rebuilt after disabling games in ${stopwatch.elapsedMilliseconds}ms');
+        }
+      });
     } catch (e) {
       print('ScoreEntryScreen: Error disabling games: $e');
       if (!mounted) return;
@@ -378,7 +409,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                   par: par,
                   handicapRating: handicapRating,
                 );
-                await Hive.box<Hole>('holeBox').add(newHole);
+                await holeBox.add(newHole);
                 Navigator.pop(context); // Close dialog
                 if (mounted) {
                   // Update cached holes and tab index in one setState
@@ -570,7 +601,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text('Enter Scores', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF4CAF50), // Simplified to single color
+        backgroundColor: const Color(0xFF4CAF50),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48.0 + 60.0), // TabBar height + button row height
           child: Column(
@@ -613,7 +644,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
         ),
       ),
       body: Container(
-        color: const Color(0xFFF5FFFA), // Simplified to single color
+        color: const Color(0xFFF5FFFA),
         child: TabBarView(
           controller: _tabController,
           children: [

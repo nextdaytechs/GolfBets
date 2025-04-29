@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
@@ -19,23 +20,29 @@ late Box<SkinsSettings> skinsSettingsBox;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   String errorMessage = '';
+  final logMessages = <String>[]; // Buffer logs
+
+  void addLog(String message) {
+    if (kDebugMode) {
+      logMessages.add("${DateTime.now()}: $message");
+    }
+  }
 
   try {
     // Request storage permissions for Android
     if (Platform.isAndroid) {
-      await _writeLog("Platform: Android, checking permissions");
-      // Request storage permissions
+      addLog("Platform: Android, checking permissions");
       var storageStatus = await Permission.storage.status;
-      await _writeLog("Storage permission status: $storageStatus");
+      addLog("Storage permission status: $storageStatus");
       if (!storageStatus.isGranted) {
         storageStatus = await Permission.storage.request();
-        await _writeLog("Storage permission request result: $storageStatus");
+        addLog("Storage permission request result: $storageStatus");
         if (!storageStatus.isGranted) {
-          await _writeLog("Storage permission denied");
+          addLog("Storage permission denied");
         }
       }
     } else {
-      await _writeLog("Platform: ${Platform.operatingSystem}, skipping Android-specific permissions");
+      addLog("Platform: ${Platform.operatingSystem}, skipping Android-specific permissions");
     }
 
     // Get storage path
@@ -43,71 +50,76 @@ void main() async {
     try {
       final appDocumentDir = await getApplicationDocumentsDirectory();
       hivePath = appDocumentDir.path;
-      await _writeLog("Primary storage path: $hivePath");
+      addLog("Primary storage path: $hivePath");
     } catch (e) {
       final tempDir = await getTemporaryDirectory();
       hivePath = tempDir.path;
-      await _writeLog("Using fallback storage path: $hivePath");
+      addLog("Using fallback storage path: $hivePath");
     }
 
-    // Ensure Hive directory exists and is writable
+    // Ensure Hive directory exists
     final hiveDir = Directory('$hivePath/flutter_hive');
     try {
       if (!await hiveDir.exists()) {
         await hiveDir.create(recursive: true);
-        await _writeLog("Created Hive directory: $hivePath/flutter_hive");
+        addLog("Created Hive directory: $hivePath/flutter_hive");
       } else {
-        await _writeLog("Hive directory already exists: $hivePath/flutter_hive");
+        addLog("Hive directory already exists: $hivePath/flutter_hive");
       }
     } catch (e) {
       errorMessage = "Error creating Hive directory: $e";
-      await _writeLog(errorMessage);
+      addLog(errorMessage);
+      await _writeLogs(logMessages);
       runApp(ErrorApp(error: errorMessage));
       return;
     }
 
     await Hive.initFlutter('flutter_hive');
-    await _writeLog("Hive initialized");
+    addLog("Hive initialized");
 
     Hive.registerAdapter(PlayerAdapter());
-    await _writeLog("PlayerAdapter registered");
+    addLog("PlayerAdapter registered");
     Hive.registerAdapter(HoleAdapter());
-    await _writeLog("HoleAdapter registered");
+    addLog("HoleAdapter registered");
     Hive.registerAdapter(ScoreEntryAdapter());
-    await _writeLog("ScoreEntryAdapter registered");
+    addLog("ScoreEntryAdapter registered");
     Hive.registerAdapter(NassauSettingsAdapter());
-    await _writeLog("NassauSettingsAdapter registered");
+    addLog("NassauSettingsAdapter registered");
     Hive.registerAdapter(SkinsSettingsAdapter());
-    await _writeLog("SkinsSettingsAdapter registered");
+    addLog("SkinsSettingsAdapter registered");
 
     playerBox = await Hive.openBox<Player>('playerBox');
-    await _writeLog("playerBox opened");
+    addLog("playerBox opened");
     holeBox = await Hive.openBox<Hole>('holeBox');
-    await _writeLog("holeBox opened");
+    addLog("holeBox opened");
     scoreBox = await Hive.openBox<ScoreEntry>('scoreBox');
-    await _writeLog("scoreBox opened");
+    addLog("scoreBox opened");
     nassauSettingsBox = await Hive.openBox<NassauSettings>('nassauSettingsBox');
-    await _writeLog("nassauSettingsBox opened");
+    addLog("nassauSettingsBox opened");
     skinsSettingsBox = await Hive.openBox<SkinsSettings>('skinsSettingsBox');
-    await _writeLog("skinsSettingsBox opened");
+    addLog("skinsSettingsBox opened");
+
+    addLog("Initialization complete");
+    await _writeLogs(logMessages);
   } catch (e, stackTrace) {
     errorMessage = "Error initializing Hive: $e\nStack trace: $stackTrace";
-    await _writeLog(errorMessage);
+    addLog(errorMessage);
+    await _writeLogs(logMessages);
     runApp(ErrorApp(error: errorMessage));
     return;
   }
 
-  await _writeLog("Initialization complete");
   runApp(const MyApp());
 }
 
-Future<void> _writeLog(String message) async {
+Future<void> _writeLogs(List<String> messages) async {
+  if (messages.isEmpty || !kDebugMode) return;
   try {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/golfbets_log.txt');
-    await file.writeAsString("${DateTime.now()}: $message\n", mode: FileMode.append);
+    await file.writeAsString(messages.join('\n') + '\n', mode: FileMode.append);
   } catch (e) {
-    debugPrint("Failed to write log: $e");
+    debugPrint("Failed to write logs: $e");
   }
 }
 
