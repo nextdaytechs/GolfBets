@@ -279,6 +279,7 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
         final hole = entry.value;
         final globalIndex = entry.key; // Global index for onEditHole
         holeTableRows.add(TableRow(
+          decoration: BoxDecoration(color: Colors.green[50]), // Light green background
           children: [
             TableCell(
               child: Padding(
@@ -296,16 +297,29 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
                       );
                     }
                   },
-                  child: Text(
-                    hole.name.isEmpty
-                        ? 'Hole ${hole.number}.${hole.par >= 3 && hole.par <= 5 ? hole.par : '?'}'
-                        : '${hole.name}.${hole.par >= 3 && hole.par <= 5 ? hole.par : '?'}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                      fontSize: 16,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hole.name.isEmpty ? 'Hole ${hole.number}' : hole.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        hole.par >= 3 && hole.par <= 5 ? '${hole.par}' : '?',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -320,16 +334,24 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
                 return const TableCell(child: SizedBox());
               }
               return TableCell(
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: InkWell(
-                    onTap: () => _showScorePicker(player.name, hole.number),
-                    child: Container(
-                      decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
-                      alignment: Alignment.center,
-                      child: Text(
-                        controller.text.isEmpty ? '-' : controller.text,
-                        style: const TextStyle(fontSize: 16),
+                child: InkWell(
+                  onTap: () => _showScorePicker(player.name, hole.number),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      color: Colors.white, // White background fills entire cell
+                    ),
+                    padding: const EdgeInsets.all(8.0), // Uniform padding all around
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            controller.text.isEmpty ? '-' : controller.text,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          SizedBox(height: 4.0), // Spacer to match two-line height
+                        ],
                       ),
                     ),
                   ),
@@ -348,7 +370,7 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
             // Fixed Header Table (P, H, T, Front 9 Summary, Back 9 Summary)
             Table(
               border: TableBorder.all(color: Colors.grey),
-              defaultColumnWidth: const FixedColumnWidth(60),
+              defaultColumnWidth: const FixedColumnWidth(65), // Expanded fixed width
               children: [
                 // P Row (Player Names)
                 TableRow(
@@ -391,10 +413,13 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
                 // T Row (Total Score)
                 TableRow(
                   children: [
-                    const TableCell(
+                    TableCell(
                       child: Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text('T', style: TextStyle(fontWeight: FontWeight.bold)),
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          'AT(${widget.holes.where((hole) => hole.number > 0).length})',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                     ...validPlayers.map((player) => TableCell(
@@ -418,7 +443,7 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
-                          'F.${_calculateTotalParForRange(1, 9)}',
+                          'F9(${_calculateTotalParForRange(1, 9)})',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -442,7 +467,7 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
-                          'B.${_calculateTotalParForRange(10, 18)}',
+                          'B9(${_calculateTotalParForRange(10, 18)})',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -467,7 +492,7 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
                 scrollDirection: Axis.vertical,
                 child: Table(
                   border: TableBorder.all(color: Colors.grey),
-                  defaultColumnWidth: const FixedColumnWidth(60),
+                  defaultColumnWidth: const FixedColumnWidth(65), // Expanded fixed width
                   children: holeTableRows,
                 ),
               ),
