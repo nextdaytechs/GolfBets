@@ -254,21 +254,21 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
           ),
         ),
       ),
-      body: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.green[50]!, Colors.white],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.green[50]!, Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Row(
                     children: [
                       Expanded(
                         child: TextField(
@@ -292,78 +292,94 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                           keyboardType: TextInputType.number,
                         ),
                       ),
-                      const SizedBox(width: 8),
                     ],
                   ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 80, left: 80, right: 80), // Adjusted for FABs
-                    itemCount: players.length,
-                    itemBuilder: (context, index) {
-                      final player = players[index];
-                      return Dismissible(
-                        key: Key(player.name),
-                        background: Container(
-                          color: Colors.redAccent,
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 16),
-                          child: const Icon(Icons.delete, color: Colors.white),
-                        ),
-                        direction: DismissDirection.endToStart,
-                        onDismissed: (_) => _deletePlayer(index),
-                        child: Card(
-                          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-                          elevation: 2,
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      ElevatedButton(
+                        onPressed: _done,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          child: ListTile(
-                            title: Text(player.name),
-                            subtitle: Text('Handicap: ${player.handicap}'),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.blue),
-                                  onPressed: () => _editPlayer(index),
-                                  tooltip: 'Edit Player',
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.redAccent),
-                                  onPressed: () => _deletePlayer(index),
-                                  tooltip: 'Delete Player',
-                                ),
-                              ],
-                            ),
+                        ),
+                        child: const Text('Done', style: TextStyle(fontSize: 16)),
+                      ),
+                      ElevatedButton(
+                        onPressed: _addPlayer,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Add', style: TextStyle(fontSize: 16)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 16, left: 16, right: 16), // Adjusted for SnackBar
+                itemCount: players.length,
+                itemBuilder: (context, index) {
+                  final player = players[index];
+                  return Dismissible(
+                    key: Key(player.name),
+                    background: Container(
+                      color: Colors.redAccent,
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 16),
+                      child: const Icon(Icons.delete, color: Colors.white),
+                    ),
+                    direction: DismissDirection.endToStart,
+                    onDismissed: (_) => _deletePlayer(index),
+                    child: Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 300),
+                        child: ListTile(
+                          title: Text(
+                            player.name,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          subtitle: Text(
+                            'Handicap: ${player.handicap}',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => _editPlayer(index),
+                                tooltip: 'Edit Player',
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.redAccent),
+                                onPressed: () => _deletePlayer(index),
+                                tooltip: 'Delete Player',
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-          Positioned(
-            bottom: 16,
-            left: 16,
-            child: FloatingActionButton.extended(
-              onPressed: _done,
-              backgroundColor: Colors.green[600],
-              elevation: 6.0,
-              label: const Text('Done', style: TextStyle(fontSize: 16)),
-            ),
-          ),
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: FloatingActionButton.extended(
-              onPressed: _addPlayer,
-              backgroundColor: Colors.green[600],
-              elevation: 6.0,
-              label: const Text('Add', style: TextStyle(fontSize: 16)),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

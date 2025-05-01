@@ -60,10 +60,10 @@ class NassauGameScreen extends StatelessWidget {
       int back9Allocation;
       if (totalHandicap.isOdd) {
         int base = totalHandicap ~/ 2;
-        front9Allocation = base + (totalHandicap % 2); // Base + remainder
+        front9Allocation = base + (totalHandicap % 2);
         back9Allocation = base;
       } else {
-        front9Allocation = totalHandicap ~/ 2; // Even split
+        front9Allocation = totalHandicap ~/ 2;
         back9Allocation = totalHandicap ~/ 2;
       }
       front9Strokes[player] = front9Allocation;
@@ -74,7 +74,6 @@ class NassauGameScreen extends StatelessWidget {
 
     // Calculate total scores for each segment
     for (var player in selectedPlayers) {
-      // Front 9 Total
       int front9Score = front9Scores
           .where((s) => s.playerName == player)
           .fold(0, (sum, s) => sum + s.relativeScore);
@@ -82,7 +81,6 @@ class NassauGameScreen extends StatelessWidget {
       front9Totals[player] = front9Score - front9Strokes[player]!;
       print('NassauGameScreen: $player - Front 9 raw: $front9Score, adjusted: ${front9Totals[player]}');
 
-      // Back 9 Total
       int back9Score = back9Scores
           .where((s) => s.playerName == player)
           .fold(0, (sum, s) => sum + s.relativeScore);
@@ -90,7 +88,6 @@ class NassauGameScreen extends StatelessWidget {
       back9Totals[player] = back9Score - back9Strokes[player]!;
       print('NassauGameScreen: $player - Back 9 raw: $back9Score, adjusted: ${back9Totals[player]}');
 
-      // Overall Total
       int overallScore = filteredScores
           .where((s) => s.playerName == player)
           .fold(0, (sum, s) => sum + s.relativeScore);
@@ -105,7 +102,6 @@ class NassauGameScreen extends StatelessWidget {
         var holeScores = filteredScores.where((s) => s.holeNumber == hole).toList();
         if (holeScores.isEmpty) continue;
 
-        // Adjust scores for handicaps on a per-hole basis for Skins
         var adjustedScores = holeScores.map((s) {
           int strokes = hole <= 9 ? front9Strokes[s.playerName]! : back9Strokes[s.playerName]!;
           int maxHole = hole <= 9 ? strokes : 9 + strokes;
@@ -113,11 +109,9 @@ class NassauGameScreen extends StatelessWidget {
           return MapEntry(s.playerName, adjustedScore);
         }).toList();
 
-        // Find the lowest adjusted score for the hole
         var minScore = adjustedScores.map((e) => e.value).reduce((a, b) => a < b ? a : b);
         var winners = adjustedScores.where((e) => e.value == minScore).map((e) => e.key).toList();
 
-        // Skins: Award points for outright hole win
         if (winners.length == 1) {
           skinsTotals[winners[0]] = (skinsTotals[winners[0]] ?? 0) + skinsPoints;
           if (hole <= 9) {
@@ -130,51 +124,99 @@ class NassauGameScreen extends StatelessWidget {
       }
     }
 
-    // Dynamic Output
+    // Dynamic Output for Winners (used for table)
     String front9Result = _getResult(front9Totals, front9HolesPlayed, 9, "Front 9 Holes", front9Bet);
     String back9Result = _getResult(back9Totals, back9HolesPlayed, 9, "Back 9 Holes", back9Bet);
     String overallResult = _getResult(overallTotals, totalHolesPlayed, 18, "18 Holes", overallBet);
     print('NassauGameScreen: Results - Front 9: $front9Result, Back 9: $back9Result, Overall: $overallResult');
 
-    // Handicap Distribution Display
-    List<Widget> handicapWidgets = selectedPlayers.map((player) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          '$player: Front 9: ${front9Strokes[player]}, Back 9: ${back9Strokes[player]}, Overall: ${handicaps[player] ?? 0}',
-          style: const TextStyle(fontSize: 16, color: Colors.black87),
-        ),
-      );
-    }).toList();
+    // Helper function to determine player status for Winners section
+    String _getPlayerStatus(String player, Map<String, int> totals, int holesPlayed, int totalHoles) {
+      if (holesPlayed == 0 || totals.isEmpty) return "No scores";
+      var minScore = totals.values.reduce((a, b) => a < b ? a : b);
+      var leaders = totals.entries.where((e) => e.value == minScore).map((e) => e.key).toList();
+      if (holesPlayed < totalHoles) {
+        if (totals[player] == minScore) return "Leading";
+        return "Trailing";
+      } else {
+        if (leaders.length == 1 && leaders.contains(player)) return "Winner";
+        if (leaders.contains(player)) return "Tied";
+        return "Lost";
+      }
+    }
 
-    // Score Card Results Display
-    List<Widget> scoreCardWidgets = selectedPlayers.map((player) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          '$player: Front 9: ${front9RawScores[player]! >= 0 ? '+' : ''}${front9RawScores[player]} (Adjusted: ${front9Totals[player]! >= 0 ? '+' : ''}${front9Totals[player]}), '
-          'Back 9: ${back9RawScores[player]! >= 0 ? '+' : ''}${back9RawScores[player]} (Adjusted: ${back9Totals[player]! >= 0 ? '+' : ''}${back9Totals[player]}), '
-          'Overall: ${overallRawScores[player]! >= 0 ? '+' : ''}${overallRawScores[player]} (Adjusted: ${overallTotals[player]! >= 0 ? '+' : ''}${overallTotals[player]})',
-          style: const TextStyle(fontSize: 16, color: Colors.black87),
-        ),
-      );
-    }).toList();
-
-    // Skins Results Display
-    String skinsResult = enableSkins ? _getSkinsResult(skinsTotals, totalHolesPlayed) : "Skins: Disabled";
-    List<Widget> skinsWidgets = enableSkins
-        ? selectedPlayers.map((player) {
-            final front9Holes = front9SkinsHoles[player]!.isEmpty ? 'None' : front9SkinsHoles[player]!.join(', ');
-            final back9Holes = back9SkinsHoles[player]!.isEmpty ? 'None' : back9SkinsHoles[player]!.join(', ');
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                '$player: Front 9: Holes $front9Holes, Back 9: Holes $back9Holes, Total: ${skinsTotals[player] ?? 0}',
-                style: const TextStyle(fontSize: 16, color: Colors.black87),
+    // Table-based Results Display
+    Widget buildSectionTable(String heading, String subheading1, List<Widget> row1, List<Widget> row2, List<Widget> row3, {int rows = 3}) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: rows == 3 ? 120 : 80, // 120 for 3 rows, 80 for 2 rows (~40 pixels each)
+            alignment: Alignment.center,
+            child: Center(
+              child: RotatedBox(
+                quarterTurns: 3,
+                child: Text(
+                  heading,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+                ),
               ),
-            );
-          }).toList()
-        : [Text(skinsResult, style: const TextStyle(fontSize: 16, color: Colors.black87))];
+            ),
+          ),
+          Expanded(
+            child: Table(
+              border: TableBorder.all(color: Colors.grey),
+              columnWidths: const {
+                0: FixedColumnWidth(50), // Subheadings column
+              },
+              defaultColumnWidth: const IntrinsicColumnWidth(), // Player columns dynamic
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: [
+                TableRow(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(color: Colors.green[100]),
+                      child: SizedBox(
+                        width: 50,
+                        child: Text(subheading1, style: const TextStyle(color: Colors.black87), textAlign: TextAlign.center),
+                      ),
+                    ),
+                    ...row1,
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: SizedBox(
+                        width: 50,
+                        child: Text('B9', style: TextStyle(color: Colors.black87), textAlign: TextAlign.center),
+                      ),
+                    ),
+                    ...row2,
+                  ],
+                ),
+                if (rows == 3)
+                  TableRow(
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: SizedBox(
+                          width: 50,
+                          child: Text('B9', style: TextStyle(color: Colors.black87), textAlign: TextAlign.center),
+                        ),
+                      ),
+                      ...row3,
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -208,37 +250,180 @@ class NassauGameScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Handicap Distribution',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                // Header Row
+                Row(
+                  children: [
+                    const SizedBox(width: 30), // Vertical headings column
+                    Expanded(
+                      child: Table(
+                        border: TableBorder.all(color: Colors.grey),
+                        columnWidths: const {
+                          0: FixedColumnWidth(50), // Subheadings column
+                        },
+                        defaultColumnWidth: const IntrinsicColumnWidth(),
+                        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                        children: [
+                          TableRow(
+                            children: [
+                              const SizedBox(width: 50),
+                              ...selectedPlayers.map((player) => Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      player,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  )),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                ...handicapWidgets,
-                const SizedBox(height: 16),
-                const Text(
-                  'Score Card Results',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                // Handicap Distribution Section
+                buildSectionTable(
+                  'Handicaps',
+                  '18',
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          '${handicaps[player] ?? 0}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          '${front9Strokes[player]}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          '${back9Strokes[player]}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
                 ),
-                const SizedBox(height: 8),
-                ...scoreCardWidgets,
-                const SizedBox(height: 16),
-                const Text(
+                // Scores Section
+                buildSectionTable(
+                  'Scores',
+                  '18',
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          '${overallRawScores[player]! >= 0 ? '+' : ''}${overallRawScores[player]}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          '${front9RawScores[player]! >= 0 ? '+' : ''}${front9RawScores[player]}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          '${back9RawScores[player]! >= 0 ? '+' : ''}${back9RawScores[player]}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                ),
+                // Adjusted Scores Section
+                buildSectionTable(
+                  'Adj. Scores',
+                  '18',
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          '${overallTotals[player]! >= 0 ? '+' : ''}${overallTotals[player]}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          '${front9Totals[player]! >= 0 ? '+' : ''}${front9Totals[player]}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          '${back9Totals[player]! >= 0 ? '+' : ''}${back9Totals[player]}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                ),
+                // Winners Section
+                buildSectionTable(
                   'Winners',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                  '18',
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          _getPlayerStatus(player, overallTotals, totalHolesPlayed, 18),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          _getPlayerStatus(player, front9Totals, front9HolesPlayed, 9),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          _getPlayerStatus(player, back9Totals, back9HolesPlayed, 9),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
                 ),
-                const SizedBox(height: 8),
-                Text(front9Result),
-                const SizedBox(height: 8),
-                Text(back9Result),
-                const SizedBox(height: 8),
-                Text(overallResult),
-                const SizedBox(height: 16),
-                const Text(
-                  'Skins Results',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                // Skins Section
+                buildSectionTable(
+                  'Skins',
+                  'F9',
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          enableSkins
+                              ? '${front9SkinsHoles[player]!.length} (${front9SkinsHoles[player]!.isEmpty ? 'None' : front9SkinsHoles[player]!.join(', ')})'
+                              : 'Disabled',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                  selectedPlayers.map((player) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          enableSkins
+                              ? '${back9SkinsHoles[player]!.length} (${back9SkinsHoles[player]!.isEmpty ? 'None' : back9SkinsHoles[player]!.join(', ')})'
+                              : 'Disabled',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.black87),
+                        ),
+                      )).toList(),
+                  selectedPlayers.map((_) => const SizedBox()).toList(),
+                  rows: 2,
                 ),
-                const SizedBox(height: 8),
-                ...skinsWidgets,
                 if (enableSkins)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
@@ -271,14 +456,5 @@ class NassauGameScreen extends StatelessWidget {
         return "$segmentName Tied: $tieText, Bet: $bet";
       }
     }
-  }
-
-  String _getSkinsResult(Map<String, int> totals, int holesPlayed) {
-    if (holesPlayed == 0 || totals.isEmpty) return "Skins: No scores yet, Points per Skin: $skinsPoints";
-    var maxSkins = totals.values.reduce((a, b) => a > b ? a : b);
-    var leaders = totals.entries.where((e) => e.value == maxSkins).map((e) => e.key).toList();
-
-    var leaderText = leaders.map((p) => "$p (${totals[p]})").join(", ");
-    return "Skins Leaders: $leaderText, Points per Skin: $skinsPoints";
   }
 }
