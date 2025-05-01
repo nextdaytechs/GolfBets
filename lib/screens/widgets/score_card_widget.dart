@@ -370,7 +370,7 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
             // Fixed Header Table (P, H, T, Front 9 Summary, Back 9 Summary)
             Table(
               border: TableBorder.all(color: Colors.grey),
-              defaultColumnWidth: const FixedColumnWidth(65), // Expanded fixed width
+              defaultColumnWidth: const FixedColumnWidth(60), // Expanded fixed width
               children: [
                 // P Row (Player Names)
                 TableRow(
@@ -492,7 +492,7 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
                 scrollDirection: Axis.vertical,
                 child: Table(
                   border: TableBorder.all(color: Colors.grey),
-                  defaultColumnWidth: const FixedColumnWidth(65), // Expanded fixed width
+                  defaultColumnWidth: const FixedColumnWidth(60), // Expanded fixed width
                   children: holeTableRows,
                 ),
               ),
