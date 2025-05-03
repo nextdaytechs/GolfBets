@@ -58,13 +58,27 @@ class NassauGameScreen extends StatelessWidget {
       int totalHandicap = handicaps[player] ?? 0;
       int front9Allocation;
       int back9Allocation;
-      if (totalHandicap.isOdd) {
-        int base = totalHandicap ~/ 2;
-        front9Allocation = base + (totalHandicap % 2);
-        back9Allocation = base;
+      if (totalHandicap >= 0) {
+        // Positive or zero handicaps
+        if (totalHandicap.isOdd) {
+          int base = totalHandicap ~/ 2;
+          front9Allocation = base + (totalHandicap % 2);
+          back9Allocation = base;
+        } else {
+          front9Allocation = totalHandicap ~/ 2;
+          back9Allocation = totalHandicap ~/ 2;
+        }
       } else {
-        front9Allocation = totalHandicap ~/ 2;
-        back9Allocation = totalHandicap ~/ 2;
+        // Negative handicaps
+        int absHandicap = totalHandicap.abs();
+        if (absHandicap.isOdd) {
+          int base = absHandicap ~/ 2;
+          front9Allocation = -(base + (absHandicap % 2));
+          back9Allocation = -base;
+        } else {
+          front9Allocation = -(absHandicap ~/ 2);
+          back9Allocation = -(absHandicap ~/ 2);
+        }
       }
       front9Strokes[player] = front9Allocation;
       back9Strokes[player] = back9Allocation;
