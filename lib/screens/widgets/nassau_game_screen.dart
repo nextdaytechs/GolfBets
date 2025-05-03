@@ -146,7 +146,7 @@ class NassauGameScreen extends StatelessWidget {
     }
 
     // Table-based Results Display
-    Widget buildSectionTable(String heading, String subheading1, List<Widget> row1, List<Widget> row2, List<Widget> row3, {int rows = 3}) {
+    Widget buildSectionTable(String heading, String subheading1, List<Widget> row1, List<Widget> row2, List<Widget> row3, {String subheading2 = 'F9', int rows = 3}) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -188,11 +188,11 @@ class NassauGameScreen extends StatelessWidget {
                 ),
                 TableRow(
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.all(8.0),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
                       child: SizedBox(
                         width: 50,
-                        child: Text('B9', style: TextStyle(color: Colors.black87), textAlign: TextAlign.center),
+                        child: Text(subheading2, style: const TextStyle(color: Colors.black87), textAlign: TextAlign.center),
                       ),
                     ),
                     ...row2,
@@ -422,6 +422,7 @@ class NassauGameScreen extends StatelessWidget {
                         ),
                       )).toList(),
                   selectedPlayers.map((_) => const SizedBox()).toList(),
+                  subheading2: 'B9',
                   rows: 2,
                 ),
                 if (enableSkins)
