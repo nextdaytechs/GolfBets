@@ -94,7 +94,6 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
       MaterialPageRoute(
         builder: (context) => PlayerManagementScreen(
           onPlayersChanged: () {
-            _disableAllGames();
             // Update cached players
             _players = playerBox.values.toList()..sort((a, b) => a.name.compareTo(b.name));
           },
@@ -163,13 +162,13 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
         print('ScoreEntryScreen: Cleared skinssettingbox');
       }
       _disableAllGames(); // Explicitly disable game managers
-      _queueSnackBar('New game started! All games disabled. Please add players.', backgroundColor: Colors.green);
+      _queueSnackBar('New game started!', backgroundColor: Colors.green, duration: const Duration(milliseconds: 800));
       // Single setState to minimize rebuilds
       setState(() {});
       print('ScoreEntryScreen: New game completed in ${stopwatch.elapsedMilliseconds}ms');
     } catch (e) {
       print('ScoreEntryScreen: Error in newGame: $e');
-      _queueSnackBar('Error starting new game: $e');
+      _queueSnackBar('Error starting new game: $e', duration: const Duration(milliseconds: 800));
     }
   }
 
@@ -274,12 +273,12 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
     );
   }
 
-  void _queueSnackBar(String message, {Color? backgroundColor}) {
+  void _queueSnackBar(String message, {Color? backgroundColor, Duration? duration}) {
     _snackBarQueue.add(message);
-    _showNextSnackBar(backgroundColor: backgroundColor);
+    _showNextSnackBar(backgroundColor: backgroundColor, duration: duration);
   }
 
-  void _showNextSnackBar({Color? backgroundColor}) {
+  void _showNextSnackBar({Color? backgroundColor, Duration? duration}) {
     if (_isShowingSnackBar || _snackBarQueue.isEmpty || !mounted) return;
     _isShowingSnackBar = true;
     final message = _snackBarQueue.removeAt(0);
@@ -287,11 +286,11 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
       SnackBar(
         content: Text(message),
         backgroundColor: backgroundColor ?? Theme.of(context).snackBarTheme.backgroundColor,
-        duration: const Duration(milliseconds: 800),
+        duration: duration ?? const Duration(milliseconds: 800),
       ),
     ).closed.then((_) {
       _isShowingSnackBar = false;
-      _showNextSnackBar(backgroundColor: backgroundColor);
+      _showNextSnackBar(backgroundColor: backgroundColor, duration: duration);
     });
   }
 
@@ -307,7 +306,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
       _skinsKey.currentState?.disable();
       _nassauKey.currentState?.disable();
       if (!mounted) return;
-      _queueSnackBar('All games disabled.', backgroundColor: Colors.redAccent);
+      _queueSnackBar('Games reset', backgroundColor: Colors.redAccent, duration: const Duration(milliseconds: 800));
       // Defer rebuild to avoid jank
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -318,7 +317,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
     } catch (e) {
       print('ScoreEntryScreen: Error disabling games: $e');
       if (!mounted) return;
-      _queueSnackBar('Error disabling games');
+      _queueSnackBar('Error disabling games', duration: const Duration(milliseconds: 800));
     } finally {
       _isDisablingGames = false;
       print('ScoreEntryScreen: DisableAllGames completed in ${stopwatch.elapsedMilliseconds}ms');
@@ -382,14 +381,14 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
 
               if (name.isEmpty) {
                 if (!mounted) return;
-                _queueSnackBar('Please enter a hole name');
+                _queueSnackBar('Please enter a hole name', duration: const Duration(milliseconds: 800));
                 return;
               }
 
               try {
                 if (!Hive.isBoxOpen('holeBox')) {
                   if (!mounted) return;
-                  _queueSnackBar('Error: Hole data not available');
+                  _queueSnackBar('Error: Hole data not available', duration: const Duration(milliseconds: 800));
                   return;
                 }
 
@@ -420,13 +419,13 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                       _tabController.index = 0;
                     }
                   });
-                  _queueSnackBar('Hole "$name" added!', backgroundColor: Colors.green[600]);
+                  _queueSnackBar('Hole "$name" added!', backgroundColor: Colors.green[600], duration: const Duration(milliseconds: 800));
                   print('ScoreEntryScreen: Hole "$name" added, final tab index: ${_tabController.index}');
                 }
               } catch (e) {
                 print('ScoreEntryScreen: Error adding hole: $e');
                 if (!mounted) return;
-                _queueSnackBar('Error adding hole: $e');
+                _queueSnackBar('Error adding hole: $e', duration: const Duration(milliseconds: 800));
               }
             },
             child: const Text('Add', style: TextStyle(color: Colors.green)),
@@ -489,7 +488,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
               try {
                 if (!Hive.isBoxOpen('holeBox') || !Hive.isBoxOpen('scoreBox')) {
                   if (!mounted) return;
-                  _queueSnackBar('Error: Data not available');
+                  _queueSnackBar('Error: Data not available', duration: const Duration(milliseconds: 800));
                   return;
                 }
 
@@ -498,7 +497,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                 final actualIndex = allHoles.indexWhere((h) => h.number == hole.number && h.name == hole.name);
                 if (actualIndex == -1) {
                   if (!mounted) return;
-                  _queueSnackBar('Error: Hole not found');
+                  _queueSnackBar('Error: Hole not found', duration: const Duration(milliseconds: 800));
                   return;
                 }
 
@@ -519,13 +518,13 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                     _holes.removeAt(actualIndex);
                     _scores = scoreBox.values.toList();
                   });
-                  _queueSnackBar('Hole "${hole.name}" deleted!', backgroundColor: Colors.redAccent);
+                  _queueSnackBar('Hole "${hole.name}" deleted!', backgroundColor: Colors.redAccent, duration: const Duration(milliseconds: 800));
                   print('ScoreEntryScreen: Hole "${hole.name}" deleted');
                 }
               } catch (e) {
                 print('ScoreEntryScreen: Error deleting hole: $e');
                 if (!mounted) return;
-                _queueSnackBar('Error deleting hole: $e');
+                _queueSnackBar('Error deleting hole: $e', duration: const Duration(milliseconds: 800));
               }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
@@ -538,14 +537,14 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
 
               if (name.isEmpty) {
                 if (!mounted) return;
-                _queueSnackBar('Please enter a hole name');
+                _queueSnackBar('Please enter a hole name', duration: const Duration(milliseconds: 800));
                 return;
               }
 
               try {
                 if (!Hive.isBoxOpen('holeBox')) {
                   if (!mounted) return;
-                  _queueSnackBar('Error: Hole data not available');
+                  _queueSnackBar('Error: Hole data not available', duration: const Duration(milliseconds: 800));
                   return;
                 }
 
@@ -554,7 +553,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                 final actualIndex = allHoles.indexWhere((h) => h.number == hole.number && h.name == hole.name);
                 if (actualIndex == -1) {
                   if (!mounted) return;
-                  _queueSnackBar('Error: Hole not found');
+                  _queueSnackBar('Error: Hole not found', duration: const Duration(milliseconds: 800));
                   return;
                 }
 
@@ -571,13 +570,13 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
                   setState(() {
                     _holes[actualIndex] = updatedHole;
                   });
-                  _queueSnackBar('Hole "$name" updated!', backgroundColor: Colors.green[600]);
+                  _queueSnackBar('Hole "$name" updated!', backgroundColor: Colors.green[600], duration: const Duration(milliseconds: 800));
                   print('ScoreEntryScreen: Hole "$name" updated');
                 }
               } catch (e) {
                 print('ScoreEntryScreen: Error editing hole: $e');
                 if (!mounted) return;
-                _queueSnackBar('Error editing hole: $e');
+                _queueSnackBar('Error editing hole: $e', duration: const Duration(milliseconds: 800));
               }
             },
             child: const Text('Save', style: TextStyle(color: Colors.green)),
