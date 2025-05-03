@@ -362,6 +362,15 @@ class _ScoreCardWidgetState extends State<ScoreCardWidget> {
         ));
       }
 
+      // Add spacer row with light green background and fixed height at the bottom
+      holeTableRows.add(TableRow(
+        decoration: BoxDecoration(color: Colors.green[50]),
+        children: [
+          const TableCell(child: SizedBox(height: 40)),
+          ...validPlayers.map((_) => const TableCell(child: SizedBox(height: 40))),
+        ],
+      ));
+
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Column(
