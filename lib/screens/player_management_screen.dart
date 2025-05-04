@@ -41,6 +41,32 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
     print('PlayerManagementScreen: isLoading set to false');
   }
 
+  Future<void> _resetGames() async {
+    print('PlayerManagementScreen: Resetting all games');
+    try {
+      final nassauBox = await Hive.openBox('nassausettingbox');
+      final skinsBox = await Hive.openBox('skinssettingbox');
+      await nassauBox.clear();
+      await skinsBox.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Games Reset'),
+          backgroundColor: Colors.redAccent,
+          duration: Duration(milliseconds: 100),
+        ),
+      );
+      print('PlayerManagementScreen: Cleared nassausettingbox and skinssettingbox');
+    } catch (e) {
+      print('PlayerManagementScreen: Error resetting games: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error resetting games: $e'),
+          duration: const Duration(milliseconds: 100),
+        ),
+      );
+    }
+  }
+
   void _addPlayer() async {
     try {
       final box = await Hive.openBox<Player>('playerBox');
@@ -59,33 +85,20 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
           SnackBar(
             content: Text('Player $name added!'),
             backgroundColor: Colors.green[600],
-            duration: const Duration(milliseconds: 800),
+            duration: const Duration(milliseconds: 100),
           ),
         );
         print('PlayerManagementScreen: Added player $name with handicap $handicap');
-        // Reset Nassau and Skins games due to player addition
-        try {
-          final nassauBox = await Hive.openBox('nassausettingbox');
-          final skinsBox = await Hive.openBox('skinssettingbox');
-          await nassauBox.clear();
-          await skinsBox.clear();
-          widget.onPlayersChanged?.call(); // Notify ScoreEntryScreen
-          print('PlayerManagementScreen: Cleared game settings and notified ScoreEntryScreen');
-        } catch (e) {
-          print('PlayerManagementScreen: Error clearing game settings: $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error disabling games: $e'),
-              duration: const Duration(milliseconds: 800),
-            ),
-          );
-        }
+        // Reset games and notify ScoreEntryScreen
+        await _resetGames();
+        widget.onPlayersChanged?.call();
+        print('PlayerManagementScreen: Notified ScoreEntryScreen');
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error: Player data not available'),
-          duration: const Duration(milliseconds: 800),
+          duration: Duration(milliseconds: 100),
         ),
       );
       print('PlayerManagementScreen: Error adding player: $e');
@@ -145,33 +158,20 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                     SnackBar(
                       content: Text('Player $newName updated!'),
                       backgroundColor: Colors.green[600],
-                      duration: const Duration(milliseconds: 800),
+                      duration: const Duration(milliseconds: 100),
                     ),
                   );
                   print('PlayerManagementScreen: Updated player to $newName with handicap $newHandicap');
-                  // Reset Nassau and Skins games due to player edit
-                  try {
-                    final nassauBox = await Hive.openBox('nassausettingbox');
-                    final skinsBox = await Hive.openBox('skinssettingbox');
-                    await nassauBox.clear();
-                    await skinsBox.clear();
-                    widget.onPlayersChanged?.call(); // Notify ScoreEntryScreen
-                    print('PlayerManagementScreen: Cleared game settings and notified ScoreEntryScreen');
-                  } catch (e) {
-                    print('PlayerManagementScreen: Error clearing game settings: $e');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error disabling games: $e'),
-                        duration: const Duration(milliseconds: 800),
-                      ),
-                    );
-                  }
+                  // Reset games and notify ScoreEntryScreen
+                  await _resetGames();
+                  widget.onPlayersChanged?.call();
+                  print('PlayerManagementScreen: Notified ScoreEntryScreen');
                 } catch (e) {
                   print('PlayerManagementScreen: Error updating player: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error updating player: $e'),
-                      duration: const Duration(milliseconds: 800),
+                      duration: const Duration(milliseconds: 100),
                     ),
                   );
                 }
@@ -196,32 +196,19 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
         SnackBar(
           content: Text('Player ${player?.name} removed!'),
           backgroundColor: Colors.redAccent,
-          duration: const Duration(milliseconds: 800),
+          duration: const Duration(milliseconds: 100),
         ),
       );
       print('PlayerManagementScreen: Deleted player ${player?.name}');
-      // Reset Nassau and Skins games due to player deletion
-      try {
-        final nassauBox = await Hive.openBox('nassausettingbox');
-        final skinsBox = await Hive.openBox('skinssettingbox');
-        await nassauBox.clear();
-        await skinsBox.clear();
-        widget.onPlayersChanged?.call(); // Notify ScoreEntryScreen
-        print('PlayerManagementScreen: Cleared game settings and notified ScoreEntryScreen');
-      } catch (e) {
-        print('PlayerManagementScreen: Error clearing game settings: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error disabling games: $e'),
-            duration: const Duration(milliseconds: 800),
-          ),
-        );
-      }
+      // Reset games and notify ScoreEntryScreen
+      await _resetGames();
+      widget.onPlayersChanged?.call();
+      print('PlayerManagementScreen: Notified ScoreEntryScreen');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error: Player data not available'),
-          duration: const Duration(milliseconds: 800),
+          duration: Duration(milliseconds: 100),
         ),
       );
       print('PlayerManagementScreen: Error deleting player: $e');
@@ -347,7 +334,7 @@ class _PlayerManagementScreenState extends State<PlayerManagementScreen> {
                       elevation: 2,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 300),
+                        constraints: const BoxConstraints(minWidth: 100),
                         child: ListTile(
                           title: Text(
                             player.name,

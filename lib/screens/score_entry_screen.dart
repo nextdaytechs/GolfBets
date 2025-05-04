@@ -195,13 +195,13 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
               Text('- Each player competes against every other player per hole. Lowest score beats each higher-scoring opponent, earning points, unless tied.'),
               Text('- Points: Base points (e.g., 1) plus bonuses for birdie (-1 score, e.g., 2 points), eagle (-2, e.g., 4 points), or albatros (≤-3, e.g., 5 points) per opponent beaten.'),
               Text('- Carry Over: If enabled, tied pairs (e.g., P1 vs. P2) accumulate base points (e.g., 1 point per tie), awarded when one beats the other outright.'),
-              Text('- Example: 4 players, Hole 1: Tyy (-1, birdie), Wee (0), P3 (0), P4 (+1). Tyy beats Wee, P3, P4, earning 3 × (1 + 2) = 9 points. Hole 2: Tyy vs. Wee ties, 1 point carries over. Hole 3: Tyy beats Wee, earns 1 + 1 = 2 points.'),
+              Text('- Example: 4 players, Hole 1: Dean (-1, birdie), Mark (0), P3 (0), P4 (+1). Dean beats Mark, P3, P4, earning 3 × (1 + 2) = 9 points. Hole 2: Dean vs. Mark ties, 1 point carries over. Hole 3: Dean beats Mark, earns 1 + 1 = 2 points.'),
               SizedBox(height: 8),
               Text('Results:'),
-              Text('- Head-to-Head Matrix: A table showing points earned against each opponent (e.g., Tyy: +3 vs. Wee in green, Wee: -3 vs. Tyy in red, 0 in black). Each cell reflects total points won or lost in pairwise contests.'),
-              Text('- Totals: Net points per player (earned minus lost, e.g., Tyy: +5, Wee: -2).'),
-              Text('- Example: "Tyy: +5, Wee: -2" means Tyy earned 5 more points than lost across all opponents.'),
-              Text('- Ties possible (e.g., Tyy and Wee both at +5).'),
+              Text('- Head-to-Head Matrix: A table showing points earned against each opponent (e.g., Dean: +3 vs. Mark in green, Mark: -3 vs. Dean in red, 0 in black). Each cell reflects total points won or lost in pairwise contests.'),
+              Text('- Totals: Net points per player (earned minus lost, e.g., Dean: +5, Mark: -2).'),
+              Text('- Example: "Dean: +5, Mark: -2" means Dean earned 5 more points than lost across all opponents.'),
+              Text('- Ties possible (e.g., Dean and Mark both at +5).'),
               Text('- If fewer holes played, shows current results.'),
               SizedBox(height: 8),
               Text('Note: No handicaps are used, rewarding raw scores.'),
@@ -234,7 +234,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
               Text('Objective: Compete in a stroke play format across three bets—Front 9, Back 9, and Overall—based on the lowest handicap-adjusted scores, with an optional Skins side bet for winning individual holes in match play.'),
               SizedBox(height: 8),
               Text('Setup:'),
-              Text('- Select players and set handicaps (e.g., 5) in the Nassau Game setup.'),
+              Text('- Select players in the Nassau Game setup.'),
               Text('- Choose bet amounts (e.g., 1 point) for Front 9, Back 9, and Overall.'),
               Text('- Optionally enable Skins to compete for points per hole (distinct from the standalone Skins game).'),
               Text('- Set points per skin (e.g., 1 point) if Skins is enabled.'),
@@ -245,19 +245,19 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
               Text('- Front 9: Lowest adjusted score (sum of relative scores minus Front 9 strokes) wins the bet.'),
               Text('- Back 9: Same for holes 10–18, using Back 9 strokes.'),
               Text('- Overall: Lowest adjusted score for 18 holes, using full handicap.'),
-              Text('- Example: Tyy (handicap 2) scores +1 on Front 9, gets 1 stroke, adjusted: 0. Wee (handicap 5) scores +3, gets 3 strokes, adjusted: 0. Result: Tied.'),
+              Text('- Example: Dean (handicap 2) scores +1 on Front 9, gets 1 stroke, adjusted: 0. Mark (handicap 5) scores +3, gets 3 strokes, adjusted: 0. Result: Tied.'),
               SizedBox(height: 8),
               Text('Optional Skins (Match Play):'),
               Text('- Each hole is a match. Lowest adjusted score wins the skin, but only if no tie.'),
               Text('- Uses same handicap strokes as main bets (e.g., 5 handicap: 3 strokes on holes 1–3, 2 on 10–11). Subtract 1 stroke per applicable hole.'),
-              Text('- Example: Hole 1, Tyy (+1, 1 stroke, adjusted: 0), Wee (+2, 1 stroke, adjusted: 1). Tyy wins 1 point.'),
+              Text('- Example: Hole 1, Dean (+1, 1 stroke, adjusted: 0), Mark (+2, 1 stroke, adjusted: 1). Dean wins 1 point.'),
               Text('- Ties award no points. Points per skin set in setup (e.g., 1 point).'),
               SizedBox(height: 8),
               Text('Results:'),
-              Text('- Main Bets: "Tied: tyy(0), wee(0), Bet: 1": Both have the same adjusted score, no points awarded.'),
-              Text('- "Winner: tyy(-1), Bet: 1": Tyy’s lowest adjusted score wins the bet.'),
-              Text('- Skins: "Leaders: tyy(5), wee(5), Points per Skin: 1": Each won 5 skins, tied for the lead.'),
-              Text('- If fewer holes played, shows current leader (e.g., "Leading: wee(2)").'),
+              Text('- Main Bets: "Tied: Dean(0), Mark(0), Bet: 1": Both have the same adjusted score, no points awarded.'),
+              Text('- "Winner: Dean(-1), Bet: 1": Dean’s lowest adjusted score wins the bet.'),
+              Text('- Skins: "Leaders: Dean(5), Mark(5), Points per Skin: 1": Each won 5 skins, tied for the lead.'),
+              Text('- If fewer holes played, shows current leader (e.g., "Leading: Mark(2)").'),
               SizedBox(height: 8),
               Text('Tips: Set accurate handicaps, aim for low scores in each segment, and enable Skins to compete for holes in match play.'),
             ],
@@ -306,7 +306,7 @@ class _ScoreEntryScreenState extends State<ScoreEntryScreen> with SingleTickerPr
       _skinsKey.currentState?.disable();
       _nassauKey.currentState?.disable();
       if (!mounted) return;
-      _queueSnackBar('Games reset', backgroundColor: Colors.redAccent, duration: const Duration(milliseconds: 800));
+      _queueSnackBar('', backgroundColor: Colors.redAccent, duration: const Duration(milliseconds: 800));
       // Defer rebuild to avoid jank
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {

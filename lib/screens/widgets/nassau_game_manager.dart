@@ -61,7 +61,7 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading Nassau settings: $e'),
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     }
@@ -82,7 +82,7 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
         SnackBar(
           content: const Text('Nassau Game Enabled!'),
           backgroundColor: Colors.green[600],
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     } catch (e) {
@@ -90,7 +90,7 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error saving Nassau settings: $e'),
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     }
@@ -104,7 +104,7 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
         SnackBar(
           content: const Text('Nassau Game Enabled with Previous Settings!'),
           backgroundColor: Colors.green[600],
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
       print('NassauGameManager: Enabled with previous settings');
@@ -267,7 +267,7 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
         SnackBar(
           content: const Text('Nassau Game Disabled'),
           backgroundColor: Colors.redAccent,
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     } catch (e) {
@@ -275,7 +275,7 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error disabling Nassau game: $e'),
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     }
@@ -297,7 +297,7 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error resetting Nassau game: $e'),
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     }
@@ -347,7 +347,7 @@ class NassauGameManagerState extends State<NassauGameManager> with AutomaticKeep
                               SnackBar(
                                 content: const Text('Nassau Game Enabled with Previous Settings!'),
                                 backgroundColor: Colors.green[600],
-                                duration: const Duration(milliseconds: 1500),
+                                duration: const Duration(milliseconds: 100),
                               ),
                             );
                             print('NassauGameManager: Enabled with previous settings via dialog');

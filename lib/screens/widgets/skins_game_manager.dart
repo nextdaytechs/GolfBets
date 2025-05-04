@@ -61,7 +61,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading Skins settings: $e'),
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     }
@@ -82,7 +82,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
         SnackBar(
           content: const Text('Skins Game Enabled!'),
           backgroundColor: Colors.green[600],
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     } catch (e) {
@@ -90,7 +90,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error saving Skins settings: $e'),
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     }
@@ -106,7 +106,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
         SnackBar(
           content: const Text('Skins Game Enabled with Previous Settings!'),
           backgroundColor: Colors.green[600],
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
       print('SkinsGameManager: Enabled with previous settings');
@@ -265,7 +265,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
         SnackBar(
           content: const Text('Skins Game Disabled'),
           backgroundColor: Colors.redAccent,
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     } catch (e) {
@@ -273,7 +273,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error disabling Skins game: $e'),
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     }
@@ -295,7 +295,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error resetting Skins game: $e'),
-          duration: const Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 100),
         ),
       );
     }
@@ -341,7 +341,7 @@ class SkinsGameManagerState extends State<SkinsGameManager> with AutomaticKeepAl
                               SnackBar(
                                 content: const Text('Skins Game Enabled with Previous Settings!'),
                                 backgroundColor: Colors.green[600],
-                                duration: const Duration(milliseconds: 1500),
+                                duration: const Duration(milliseconds: 100),
                               ),
                             );
                             print('SkinsGameManager: Enabled with previous settings via dialog');
