@@ -26,13 +26,12 @@
 
 | Nassau Game Results Detailed | Whittier Skins Game Setup | Whittier Skins Results |
 |-----------------------------|---------------------------|------------------------|
-| ![Nassau Game Results Detailed](screen_shots/Nassau_game_results_detailed.png) | ![Whittier Skins Game Setup](screen_shots/Whittier_skins_game_setup.png) | ![Whittier Skins Results](screen_shots/Whittier_skins_results.png) |
+| ![Nassau Game Results Detailed](screen_shots/Nassau_game_results_detailed.png) | ![Whittier Skins Game Setup](screen_shots/Whittier_skins_game_setup.png) | ![Whittier Skins Results](screen_shots/Whitter_skins_results.png) |
 
 | Who’s Winning Skins |
 |---------------------|
 | ![Who’s Winning Skins](screen_shots/who_is_winning_skins.png) |
 
-*Note*: Some screenshot filenames (`Whitter_skins_results.png`, `Wittier_skins_game_setup.png`) may be typos. They’ve been corrected to `Whittier` above, assuming consistency with the app’s naming.
 
 ## Installation
 
