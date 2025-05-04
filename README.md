@@ -1,16 +1,42 @@
-# golf_score_app
+# GolfBets
 
-A new Flutter project.
+![GolfBets Logo](screen_shots/Score_card.png) <!-- Replace with a logo if you have one -->
 
-## Getting Started
+**GolfBets** is a user-friendly mobile app built with Flutter for golf enthusiasts who love adding a competitive edge to their rounds through friendly wagers. Whether you're tracking scores or settling bets in Nassau or Whittier Skins games, GolfBets offers a seamless experience with a sleek, intuitive interface. Perfect for casual rounds or competitive outings, GolfBets ensures every hole counts!
 
-This project is a starting point for a Flutter application.
+## Features
 
-A few resources to get you started if this is your first Flutter project:
+- **Effortless Scorekeeping**: Track scores for each player and hole with support for par and handicap adjustments.
+- **Nassau Game**: Compete in the classic Nassau format with customizable bets for Front 9, Back 9, and Overall, plus optional Skins for hole-by-hole match play.
+- **Whittier Skins Game**: Engage in match play-style Skins with points, bonuses for birdies/eagles, and carry-over for tied holes.
+- **Player Management**: Easily add, edit, or remove players, including their handicaps for fair scoring.
+- **Customizable Holes**: Define holes with names, par values, and handicap ratings tailored to your course.
+- **Persistent Storage**: Uses Hive for fast, offline data storage of players, holes, scores, and game settings.
+- **Clear Alerts**: Streamlined notifications (e.g., single "Games Reset" alert) for a smooth user experience.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Screenshots
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+| Score Card | Players Entry | Adding a Hole |
+|------------|---------------|---------------|
+| ![Score Card](screen_shots/Score_card.png) | ![Players Entry](screen_shots/Players_Entry.png) | ![Adding a Hole](screen_shots/Adding_a_hole.png) |
+
+| GolfBet Games | Nassau Game Setup | Nassau Game Results |
+|---------------|-------------------|---------------------|
+| ![GolfBet Games](screen_shots/GolfBet_games.png) | ![Nassau Game Setup](screen_shots/Nassau_game_setup.png) | ![Nassau Game Results](screen_shots/Nassau_game_results.png) |
+
+| Nassau Game Results Detailed | Whittier Skins Game Setup | Whittier Skins Results |
+|-----------------------------|---------------------------|------------------------|
+| ![Nassau Game Results Detailed](screen_shots/Nassau_game_results_detailed.png) | ![Whittier Skins Game Setup](screen_shots/Whittier_skins_game_setup.png) | ![Whittier Skins Results](screen_shots/Whittier_skins_results.png) |
+
+| Who’s Winning Skins |
+|---------------------|
+| ![Who’s Winning Skins](screen_shots/who_is_winning_skins.png) |
+
+*Note*: Some screenshot filenames (`Whitter_skins_results.png`, `Wittier_skins_game_setup.png`) may be typos. They’ve been corrected to `Whittier` above, assuming consistency with the app’s naming.
+
+## Installation
+
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/nextdaytechs/GolfBets.git
+   cd GolfBets

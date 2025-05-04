@@ -22,6 +22,15 @@ dev_dependencies:
   hive_generator: ^2.0.1 # Downgraded to stable version
   build_runner: ^2.4.13
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icon/
+    
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/golfbets_logo.png"
+  min_sdk_android: 21
